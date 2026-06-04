@@ -1,0 +1,496 @@
+# Build GHH Library - Smart Library Management System
+
+Create a complete production-ready mobile application named "GHH Library" using Flutter (Android & iOS) and Firebase/Supabase backend.
+
+## Project Overview
+
+GHH Library is a modern smart library management platform that connects library owners and students. The platform introduces a revolutionary Pay-Per-Attendance model instead of traditional monthly subscriptions.
+
+The application should have three roles:
+
+1. Super Admin
+2. Library Owner (Admin)
+3. Student
+
+The UI should be modern, clean, premium, responsive, and easy to use.
+
+---
+
+# Core USP
+
+## Pay Per Attendance System
+
+Instead of charging for calendar days, students purchase attendance credits.
+
+Example:
+
+* Student purchases 30 attendance credits.
+* If the student attends only 20 days and marks leave for 10 days, only 20 credits are consumed.
+* Remaining credits stay available.
+* Student receives full value for the purchased plan.
+
+---
+
+## Fair Use Policy
+
+To prevent losses for library owners:
+
+* Leave must be marked before a configurable cutoff time.
+* Owners can allocate released seats to Daily Pass users.
+* Every plan has maximum validity.
+
+Example:
+
+* 30 Credits Plan
+* Validity = 45 Days
+
+Unused credits expire after validity period.
+
+---
+
+# User Roles
+
+## 1. Super Admin
+
+Features:
+
+* Manage all libraries
+* Verify library owners
+* View platform analytics
+* Manage subscriptions
+* Manage complaints
+* Push notifications
+* User management
+* Revenue analytics
+* Referral management
+
+Dashboard Metrics:
+
+* Total Libraries
+* Total Students
+* Active Users
+* Daily Attendance
+* Revenue Statistics
+* Seat Occupancy Analytics
+
+---
+
+# 2. Library Owner Dashboard
+
+Features:
+
+## Library Setup
+
+* Create Library Profile
+* Upload Images
+* Library Description
+* Address & Google Maps Location
+* Facilities Management
+
+Examples:
+
+* WiFi
+* AC
+* RO Water
+* Parking
+* Power Backup
+* CCTV
+
+---
+
+## Seat Management
+
+Create digital seat map.
+
+Features:
+
+* Add Seats
+* Edit Seats
+* Delete Seats
+* Seat Numbering
+* Seat Categories
+
+Seat Status:
+
+* Available
+* Reserved
+* Occupied
+* Temporary Available
+* Maintenance
+
+Visual Seat Layout Builder.
+
+---
+
+## Shift Management
+
+Create multiple shifts:
+
+Examples:
+
+* Morning Shift
+* Afternoon Shift
+* Evening Shift
+* Full Day
+
+Custom timing support.
+
+---
+
+## Student Management
+
+* Add Student
+* Approve Registration
+* Assign Seat
+* Change Seat
+* Suspend Student
+* Attendance History
+* Payment History
+
+---
+
+## QR Attendance System
+
+Generate dynamic QR Code.
+
+Student Workflow:
+
+* Scan QR at Entry
+* Scan QR at Exit
+
+Store:
+
+* Entry Time
+* Exit Time
+* Attendance Duration
+
+Prevent fake attendance using:
+
+* GPS Verification
+* QR Refresh Timer
+* Device Validation
+
+---
+
+## Attendance Analytics
+
+Reports:
+
+* Daily Attendance
+* Weekly Attendance
+* Monthly Attendance
+* Occupancy Rate
+* Seat Utilization
+
+---
+
+## Notification Center
+
+Send:
+
+* Fee Reminders
+* Expiry Alerts
+* Attendance Alerts
+* Announcements
+
+Push Notifications + In-App Notifications.
+
+---
+
+## Daily Pass Management
+
+Owner can:
+
+* Release available seats
+* Sell daily passes
+* Set daily pass pricing
+
+---
+
+# 3. Student Application
+
+## Authentication
+
+* Mobile OTP Login
+* Email Login
+* Google Login
+
+---
+
+## Library Discovery
+
+Search Libraries by:
+
+* City
+* Area
+* Facilities
+* Ratings
+* Price
+
+Filters:
+
+* AC
+* WiFi
+* Parking
+* 24x7
+* Girls Friendly
+
+---
+
+## Live Seat Availability
+
+Display:
+
+* Total Seats
+* Available Seats
+* Occupied Seats
+
+Show real-time seat map.
+
+---
+
+## Seat Reservation
+
+Student can:
+
+* Select Shift
+* Select Seat
+* Book Seat
+* Change Seat
+
+Reservation Confirmation Screen.
+
+---
+
+## Attendance Credits Wallet
+
+Wallet Features:
+
+* Available Credits
+* Consumed Credits
+* Expired Credits
+* Purchase History
+
+Every attendance automatically deducts one credit.
+
+---
+
+## Leave Management
+
+Student can:
+
+* Mark Leave
+* View Leave History
+* Cancel Leave
+
+Rules:
+
+* Leave must be marked before cutoff time.
+* Credit is not deducted when leave is approved.
+
+---
+
+## Attendance Dashboard
+
+Show:
+
+* Total Attended Days
+* Remaining Credits
+* Attendance Percentage
+* Current Streak
+
+---
+
+## Rewards System
+
+Achievements:
+
+* 7 Day Streak
+* 15 Day Streak
+* 30 Day Streak
+* 100 Attendance Days
+
+Rewards:
+
+* Free Credits
+* Discount Coupons
+* Partner Offers
+
+---
+
+## Referral System
+
+Student gets referral code.
+
+When a friend joins:
+
+* Referrer gets bonus credits.
+* New user gets welcome credits.
+
+Referral analytics page.
+
+---
+
+# Payment System
+
+Integrate:
+
+* Razorpay
+* UPI
+* Credit Card
+* Debit Card
+* Net Banking
+
+Plans:
+
+* 15 Credits
+* 30 Credits
+* 60 Credits
+* Custom Plans
+
+Store complete payment history.
+
+---
+
+# Notifications
+
+Use Firebase Cloud Messaging.
+
+Notifications:
+
+* Attendance Marked
+* Credits Low
+* Plan Expiring
+* Seat Changed
+* New Offers
+* Referral Rewards
+
+---
+
+# Database Design
+
+Collections/Tables:
+
+Users
+Libraries
+Seats
+Shifts
+Attendance
+AttendanceCredits
+Plans
+Payments
+Leaves
+Notifications
+Referrals
+Rewards
+Coupons
+DailyPasses
+Reports
+
+---
+
+# Security
+
+* JWT Authentication
+* Role Based Access Control
+* Secure API Layer
+* Encrypted Data
+* Firebase Security Rules
+* Rate Limiting
+
+---
+
+# Tech Stack
+
+Frontend:
+
+* Flutter
+
+Backend:
+
+* Node.js + Express
+
+Database:
+
+* PostgreSQL or Supabase
+
+Realtime:
+
+* Firebase / Supabase Realtime
+
+Authentication:
+
+* Firebase Auth
+
+Storage:
+
+* Firebase Storage
+
+Maps:
+
+* Google Maps API
+
+Payments:
+
+* Razorpay
+
+Notifications:
+
+* Firebase Cloud Messaging
+
+QR:
+
+* Dynamic QR Attendance System
+
+---
+
+# UI Requirements
+
+Design Style:
+
+* Modern
+* Premium
+* Minimal
+* Fast
+* Dark Mode
+* Light Mode
+
+Screens:
+
+* Splash Screen
+* Login
+* Register
+* Home
+* Library Listing
+* Library Details
+* Seat Layout
+* Attendance Wallet
+* QR Scanner
+* Rewards
+* Referrals
+* Profile
+* Notifications
+* Admin Dashboard
+* Owner Dashboard
+
+---
+
+# Deliverables
+
+Generate:
+
+1. Complete Flutter Source Code
+2. Backend API Code
+3. Database Schema
+4. API Documentation
+5. Firebase Configuration
+6. Admin Dashboard
+7. Student App
+8. Library Owner App
+9. Razorpay Integration
+10. QR Attendance Module
+11. Referral System
+12. Rewards System
+13. Push Notification System
+
+The project should be scalable, production-ready, secure, and deployable on Android, iOS, and Web.
