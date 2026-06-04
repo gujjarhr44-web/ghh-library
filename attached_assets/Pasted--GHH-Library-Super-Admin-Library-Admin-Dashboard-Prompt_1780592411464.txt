@@ -1,0 +1,493 @@
+# GHH Library – Super Admin & Library Admin Dashboard Prompt
+
+I already have a working GHH Library application built on Replit. I need a complete, production-ready Admin Management System consisting of:
+
+1. Super Admin Panel
+2. Library Owner (Library Admin) Panel
+
+Use the existing database, authentication system, and APIs wherever possible. If any API is missing, create it following the existing project architecture.
+
+## Design Requirements
+
+Create a modern SaaS-style dashboard similar to Stripe, Notion, or modern CRM platforms.
+
+Requirements:
+
+* Responsive Web Dashboard
+* Clean UI/UX
+* Dark Mode & Light Mode
+* Mobile Friendly
+* Fast Loading
+* Role-Based Access Control
+* Professional Data Tables
+* Search, Filter & Pagination
+* Real-Time Updates
+* Notification System
+* Audit Logs
+
+---
+
+# SUPER ADMIN PANEL
+
+## Dashboard Home
+
+Display real-time statistics:
+
+* Total Libraries
+* Active Libraries
+* Pending Library Approvals
+* Total Students
+* Active Students
+* Daily Attendance
+* Monthly Attendance
+* Total Seats
+* Occupied Seats
+* Available Seats
+* Total Revenue
+* Monthly Revenue
+* Daily New Registrations
+
+Show charts for:
+
+* Student Growth
+* Attendance Trends
+* Revenue Trends
+* Library Growth
+* Seat Utilization
+
+---
+
+## Library Management
+
+Create a complete library management module.
+
+Features:
+
+### Library List
+
+Display:
+
+* Library Name
+* Owner Name
+* Mobile Number
+* City
+* Total Seats
+* Active Students
+* Status
+* Registration Date
+
+Actions:
+
+* View
+* Edit
+* Approve
+* Reject
+* Suspend
+* Reactivate
+* Delete
+
+### Library Details Page
+
+Display:
+
+* Complete Profile
+* Owner Information
+* Address
+* Photos
+* Facilities
+* Seat Layout
+* Revenue Statistics
+* Attendance Statistics
+* Student Statistics
+
+---
+
+## Library Approval System
+
+When a new library registers:
+
+Status Options:
+
+* Pending
+* Approved
+* Rejected
+* Suspended
+
+Admin can:
+
+* Verify documents
+* Approve application
+* Reject application
+* Request additional information
+
+---
+
+## Student Management
+
+View all students across all libraries.
+
+Display:
+
+* Student Name
+* Mobile Number
+* Library
+* Assigned Seat
+* Plan
+* Credits Remaining
+* Attendance %
+* Status
+
+Actions:
+
+* View Profile
+* Suspend
+* Activate
+* Reset Credits
+* Transfer Library
+* Delete Account
+
+---
+
+## Payment Management
+
+Display:
+
+* Total Collections
+* Today's Collections
+* Monthly Collections
+
+Payment Table:
+
+* Transaction ID
+* Student Name
+* Library Name
+* Amount
+* Payment Method
+* Date
+* Status
+
+Features:
+
+* Search
+* Filter
+* Export CSV
+* Export Excel
+
+---
+
+## Attendance Monitoring
+
+Display:
+
+* Live Attendance
+* Entry Logs
+* Exit Logs
+* Absent Students
+* Leave Requests
+
+Filters:
+
+* Library
+* Date
+* Student
+* Shift
+
+---
+
+## Referral System Management
+
+Display:
+
+* Total Referrals
+* Successful Referrals
+* Credits Issued
+
+Features:
+
+* Manage referral rewards
+* Configure bonus credits
+* Disable abusive accounts
+
+---
+
+## Coupon & Reward Management
+
+Create:
+
+* Discount Coupons
+* Bonus Credits
+* Promotional Campaigns
+
+Track:
+
+* Usage
+* Expiry
+* Redemption Rate
+
+---
+
+## Notifications Center
+
+Send notifications to:
+
+* All Users
+* Specific Libraries
+* Specific Students
+
+Notification Types:
+
+* Push Notification
+* In-App Notification
+* SMS Ready Structure
+
+---
+
+## Reports Section
+
+Generate reports:
+
+* Attendance Report
+* Revenue Report
+* Library Report
+* Student Activity Report
+* Credit Consumption Report
+
+Export:
+
+* PDF
+* Excel
+* CSV
+
+---
+
+## Settings
+
+Manage:
+
+* Platform Name
+* Logo
+* Terms & Conditions
+* Privacy Policy
+* Attendance Rules
+* Leave Rules
+* Credit Rules
+* Referral Rules
+
+---
+
+# LIBRARY ADMIN PANEL
+
+## Dashboard Overview
+
+Display:
+
+* Total Seats
+* Occupied Seats
+* Available Seats
+* Total Students
+* Active Students
+* Today's Attendance
+* Credits Consumed Today
+* Revenue This Month
+
+Charts:
+
+* Attendance Trend
+* Seat Occupancy
+* Student Growth
+
+---
+
+## Seat Management
+
+Create visual seat management.
+
+Features:
+
+* Add Seat
+* Edit Seat
+* Delete Seat
+* Change Status
+* Bulk Seat Creation
+
+Seat Status:
+
+* Available
+* Reserved
+* Occupied
+* Maintenance
+
+Display seat layout graphically.
+
+---
+
+## Shift Management
+
+Create:
+
+* Morning Shift
+* Evening Shift
+* Full Day Shift
+* Custom Shift
+
+Features:
+
+* Add Shift
+* Edit Shift
+* Delete Shift
+
+---
+
+## Student Management
+
+Display:
+
+* Student Profile
+* Assigned Seat
+* Shift
+* Credits Remaining
+* Attendance Record
+
+Actions:
+
+* Add Student
+* Assign Seat
+* Change Seat
+* Change Shift
+* Suspend Student
+* Reactivate Student
+
+---
+
+## Attendance Management
+
+QR-based attendance tracking.
+
+Display:
+
+* Entry Time
+* Exit Time
+* Duration
+* Attendance Status
+
+Features:
+
+* Manual Correction
+* Attendance History
+* Attendance Export
+
+---
+
+## Leave Management
+
+Display leave requests.
+
+Actions:
+
+* Approve Leave
+* Reject Leave
+* Auto Credit Protection
+
+When leave is approved:
+
+* No attendance credit should be deducted.
+
+---
+
+## Credit & Wallet Management
+
+Display:
+
+* Total Credits
+* Remaining Credits
+* Expiring Credits
+
+Actions:
+
+* Add Credits
+* Bonus Credits
+* Adjust Credits
+
+Track complete history.
+
+---
+
+## Daily Pass System
+
+Manage temporary seats.
+
+Features:
+
+* Mark Seat Available
+* Daily Pass Booking
+* Daily Pass Pricing
+* Daily Pass Revenue Tracking
+
+---
+
+## Notifications
+
+Send announcements to students.
+
+Examples:
+
+* Library Closed
+* Seat Changes
+* Payment Reminder
+* Special Offer
+
+---
+
+## Analytics
+
+Display:
+
+* Most Used Seats
+* Peak Hours
+* Attendance Percentage
+* Student Retention
+* Leave Statistics
+
+---
+
+## Security & Permissions
+
+Implement strict RBAC:
+
+Super Admin:
+
+* Full Access
+
+Library Admin:
+
+* Access only to own library
+
+Students:
+
+* No admin access
+
+Protect all routes, APIs, and database queries accordingly.
+
+---
+
+## Final Requirement
+
+Generate:
+
+* Complete Dashboard UI
+* Database Models
+* API Endpoints
+* Role-Based Authentication
+* Responsive Layout
+* Charts & Reports
+* Search & Filters
+* Export Features
+* Production-Ready Code
+* Clean Folder Structure
+* Proper Comments
+* Error Handling
+* Loading States
+* Empty States
+* Success/Error Toast Notifications
+
+The final result should feel like a professional SaaS product and be ready for real-world deployment.

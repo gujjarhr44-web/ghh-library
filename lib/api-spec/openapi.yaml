@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: GHH Library Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Super Admin operations
+  - name: owner
+    description: Library Owner operations
 paths:
   /healthz:
     get:
@@ -24,13 +28,953 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Super Admin Dashboard ──────────────────────────────────────────
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Platform-wide statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/charts/student-growth:
+    get:
+      operationId: getStudentGrowthChart
+      tags: [admin]
+      summary: Monthly student growth data
+      responses:
+        "200":
+          description: Growth data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyDataPoint"
+
+  /admin/charts/attendance-trend:
+    get:
+      operationId: getAttendanceTrendChart
+      tags: [admin]
+      summary: Daily attendance trend data
+      responses:
+        "200":
+          description: Attendance trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyDataPoint"
+
+  /admin/charts/revenue-trend:
+    get:
+      operationId: getRevenueTrendChart
+      tags: [admin]
+      summary: Monthly revenue trend data
+      responses:
+        "200":
+          description: Revenue trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyDataPoint"
+
+  /admin/libraries:
+    get:
+      operationId: getAdminLibraries
+      tags: [admin]
+      summary: List all libraries
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Libraries list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminLibrary"
+
+  /admin/libraries/{id}:
+    get:
+      operationId: getAdminLibraryDetail
+      tags: [admin]
+      summary: Library detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Library detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLibrary"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateAdminLibrary
+      tags: [admin]
+      summary: Update library status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLibrary"
+
+  /admin/students:
+    get:
+      operationId: getAdminStudents
+      tags: [admin]
+      summary: List all students across all libraries
+      parameters:
+        - name: library
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Students list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminStudent"
+
+  /admin/payments:
+    get:
+      operationId: getAdminPayments
+      tags: [admin]
+      summary: Payment transactions
+      responses:
+        "200":
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentTransaction"
+
+  /admin/attendance:
+    get:
+      operationId: getAdminAttendance
+      tags: [admin]
+      summary: Attendance logs
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: library
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Attendance logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceLog"
+
+  /admin/notifications:
+    get:
+      operationId: getAdminNotifications
+      tags: [admin]
+      summary: Notifications list
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+    post:
+      operationId: sendAdminNotification
+      tags: [admin]
+      summary: Send a notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationInput"
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  # ── Library Owner Dashboard ────────────────────────────────────────
+  /owner/stats:
+    get:
+      operationId: getOwnerStats
+      tags: [owner]
+      summary: Library-level statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerStats"
+
+  /owner/charts/attendance:
+    get:
+      operationId: getOwnerAttendanceChart
+      tags: [owner]
+      summary: Weekly attendance chart for this library
+      responses:
+        "200":
+          description: Attendance chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyDataPoint"
+
+  /owner/charts/seat-occupancy:
+    get:
+      operationId: getOwnerSeatOccupancyChart
+      tags: [owner]
+      summary: Seat occupancy by shift
+      responses:
+        "200":
+          description: Seat occupancy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SeatOccupancyPoint"
+
+  /owner/seats:
+    get:
+      operationId: getOwnerSeats
+      tags: [owner]
+      summary: All seats in this library
+      responses:
+        "200":
+          description: Seats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Seat"
+    post:
+      operationId: createOwnerSeat
+      tags: [owner]
+      summary: Add a new seat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeatInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Seat"
+
+  /owner/seats/{id}:
+    patch:
+      operationId: updateOwnerSeat
+      tags: [owner]
+      summary: Update seat status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeatUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Seat"
+
+  /owner/students:
+    get:
+      operationId: getOwnerStudents
+      tags: [owner]
+      summary: Students in this library
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OwnerStudent"
+
+  /owner/attendance:
+    get:
+      operationId: getOwnerAttendance
+      tags: [owner]
+      summary: Today's attendance for this library
+      responses:
+        "200":
+          description: Attendance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceEntry"
+
+  /owner/leaves:
+    get:
+      operationId: getOwnerLeaves
+      tags: [owner]
+      summary: Leave requests for this library
+      responses:
+        "200":
+          description: Leave requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaveRequest"
+
+  /owner/leaves/{id}/approve:
+    patch:
+      operationId: approveLeave
+      tags: [owner]
+      summary: Approve a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+
+  /owner/leaves/{id}/reject:
+    patch:
+      operationId: rejectLeave
+      tags: [owner]
+      summary: Reject a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+
+  /owner/credits/adjust:
+    post:
+      operationId: adjustStudentCredits
+      tags: [owner]
+      summary: Add or adjust credits for a student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditAdjustment"
+      responses:
+        "200":
+          description: Adjusted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerStudent"
+
+  /owner/shifts:
+    get:
+      operationId: getOwnerShifts
+      tags: [owner]
+      summary: Shifts for this library
+      responses:
+        "200":
+          description: Shifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shift"
+    post:
+      operationId: createOwnerShift
+      tags: [owner]
+      summary: Create a new shift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShiftInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Shared ──────────────────────────────────────────────────────
+    MonthlyDataPoint:
+      type: object
+      required: [month, value]
+      properties:
+        month:
+          type: string
+        value:
+          type: number
+        secondary:
+          type: ["number", "null"]
+
+    WeeklyDataPoint:
+      type: object
+      required: [day, present, absent]
+      properties:
+        day:
+          type: string
+        present:
+          type: number
+        absent:
+          type: number
+
+    SeatOccupancyPoint:
+      type: object
+      required: [shift, occupied, available]
+      properties:
+        shift:
+          type: string
+        occupied:
+          type: number
+        available:
+          type: number
+
+    # ── Super Admin ──────────────────────────────────────────────────
+    AdminStats:
+      type: object
+      required:
+        - totalLibraries
+        - activeLibraries
+        - pendingApprovals
+        - totalStudents
+        - activeStudents
+        - dailyAttendance
+        - monthlyAttendance
+        - totalSeats
+        - occupiedSeats
+        - availableSeats
+        - totalRevenue
+        - monthlyRevenue
+        - dailyNewRegistrations
+      properties:
+        totalLibraries:
+          type: integer
+        activeLibraries:
+          type: integer
+        pendingApprovals:
+          type: integer
+        totalStudents:
+          type: integer
+        activeStudents:
+          type: integer
+        dailyAttendance:
+          type: integer
+        monthlyAttendance:
+          type: integer
+        totalSeats:
+          type: integer
+        occupiedSeats:
+          type: integer
+        availableSeats:
+          type: integer
+        totalRevenue:
+          type: number
+        monthlyRevenue:
+          type: number
+        dailyNewRegistrations:
+          type: integer
+
+    AdminLibrary:
+      type: object
+      required:
+        - id
+        - name
+        - ownerName
+        - mobile
+        - city
+        - totalSeats
+        - activeStudents
+        - status
+        - registrationDate
+        - monthlyRevenue
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ownerName:
+          type: string
+        mobile:
+          type: string
+        city:
+          type: string
+        area:
+          type: string
+        totalSeats:
+          type: integer
+        activeStudents:
+          type: integer
+        status:
+          type: string
+          enum: [approved, pending, rejected, suspended]
+        registrationDate:
+          type: string
+        monthlyRevenue:
+          type: number
+        occupancyRate:
+          type: number
+        facilities:
+          type: array
+          items:
+            type: string
+
+    LibraryStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, pending, rejected, suspended]
+
+    AdminStudent:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - mobile
+        - library
+        - seat
+        - plan
+        - creditsRemaining
+        - attendancePercent
+        - status
+        - joinDate
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        mobile:
+          type: string
+        library:
+          type: string
+        seat:
+          type: string
+        plan:
+          type: string
+        creditsRemaining:
+          type: integer
+        attendancePercent:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, expired]
+        joinDate:
+          type: string
+
+    PaymentTransaction:
+      type: object
+      required:
+        - id
+        - transactionId
+        - studentName
+        - libraryName
+        - amount
+        - method
+        - date
+        - status
+      properties:
+        id:
+          type: string
+        transactionId:
+          type: string
+        studentName:
+          type: string
+        libraryName:
+          type: string
+        amount:
+          type: number
+        method:
+          type: string
+        date:
+          type: string
+        status:
+          type: string
+          enum: [success, failed, pending, refunded]
+
+    AttendanceLog:
+      type: object
+      required:
+        - id
+        - studentName
+        - library
+        - date
+        - entryTime
+        - shift
+        - status
+      properties:
+        id:
+          type: string
+        studentName:
+          type: string
+        library:
+          type: string
+        date:
+          type: string
+        entryTime:
+          type: string
+        exitTime:
+          type: ["string", "null"]
+        shift:
+          type: string
+        status:
+          type: string
+          enum: [present, absent, leave, late]
+        creditsDeducted:
+          type: ["number", "null"]
+
+    Notification:
+      type: object
+      required: [id, title, message, target, sentAt, type]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        target:
+          type: string
+          enum: [all, library, student]
+        targetId:
+          type: ["string", "null"]
+        sentAt:
+          type: string
+        type:
+          type: string
+          enum: [announcement, alert, reminder, promotion]
+
+    NotificationInput:
+      type: object
+      required: [title, message, target, type]
+      properties:
+        title:
+          type: string
+        message:
+          type: string
+        target:
+          type: string
+          enum: [all, library, student]
+        targetId:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [announcement, alert, reminder, promotion]
+
+    # ── Library Owner ────────────────────────────────────────────────
+    OwnerStats:
+      type: object
+      required:
+        - totalSeats
+        - occupiedSeats
+        - availableSeats
+        - totalStudents
+        - activeStudents
+        - todayAttendance
+        - creditsConsumedToday
+        - monthlyRevenue
+      properties:
+        totalSeats:
+          type: integer
+        occupiedSeats:
+          type: integer
+        availableSeats:
+          type: integer
+        totalStudents:
+          type: integer
+        activeStudents:
+          type: integer
+        todayAttendance:
+          type: integer
+        creditsConsumedToday:
+          type: integer
+        monthlyRevenue:
+          type: number
+
+    Seat:
+      type: object
+      required: [id, number, row, col, category, status]
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        row:
+          type: integer
+        col:
+          type: integer
+        category:
+          type: string
+          enum: [window, standard, premium]
+        status:
+          type: string
+          enum: [available, reserved, occupied, maintenance]
+        studentName:
+          type: ["string", "null"]
+        shiftId:
+          type: ["string", "null"]
+
+    SeatInput:
+      type: object
+      required: [number, row, col, category]
+      properties:
+        number:
+          type: string
+        row:
+          type: integer
+        col:
+          type: integer
+        category:
+          type: string
+          enum: [window, standard, premium]
+
+    SeatUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [available, reserved, occupied, maintenance]
+        studentName:
+          type: ["string", "null"]
+
+    OwnerStudent:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - seat
+        - shift
+        - creditsRemaining
+        - planExpiry
+        - attendance
+        - status
+        - joinDate
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        seat:
+          type: string
+        shift:
+          type: string
+        creditsRemaining:
+          type: integer
+        planExpiry:
+          type: string
+        attendance:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, expired]
+        joinDate:
+          type: string
+
+    AttendanceEntry:
+      type: object
+      required: [id, studentName, seat, shift, entryTime, status]
+      properties:
+        id:
+          type: string
+        studentName:
+          type: string
+        seat:
+          type: string
+        shift:
+          type: string
+        entryTime:
+          type: string
+        exitTime:
+          type: ["string", "null"]
+        duration:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [present, absent, leave]
+        creditDeducted:
+          type: ["number", "null"]
+
+    LeaveRequest:
+      type: object
+      required: [id, studentName, date, reason, status, appliedAt]
+      properties:
+        id:
+          type: string
+        studentName:
+          type: string
+        seat:
+          type: string
+        date:
+          type: string
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        appliedAt:
+          type: string
+        creditSaved:
+          type: ["number", "null"]
+
+    CreditAdjustment:
+      type: object
+      required: [studentId, amount, reason]
+      properties:
+        studentId:
+          type: string
+        amount:
+          type: integer
+        reason:
+          type: string
+
+    Shift:
+      type: object
+      required: [id, name, startTime, endTime]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        capacity:
+          type: ["integer", "null"]
+        enrolled:
+          type: ["integer", "null"]
+
+    ShiftInput:
+      type: object
+      required: [name, startTime, endTime]
+      properties:
+        name:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        capacity:
+          type: ["integer", "null"]
