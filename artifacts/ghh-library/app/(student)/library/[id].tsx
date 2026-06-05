@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -79,10 +80,19 @@ export default function LibraryDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.heroSection, { paddingHorizontal: 20, paddingTop: 16 }]}>
-          <View style={[styles.heroBox, { backgroundColor: colors.primary + "20" }]}>
-            <MaterialCommunityIcons name="book-open-page-variant" size={52} color={colors.primary} />
+        <View style={styles.heroImageWrapper}>
+          <Image
+            source={{ uri: library.image }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.heroOverlay} />
+          <View style={[styles.openBadge, { backgroundColor: library.isOpen ? colors.success : colors.destructive }]}>
+            <Text style={styles.openBadgeText}>{library.isOpen ? `Open · until ${library.closeTime}` : "Closed"}</Text>
           </View>
+        </View>
+
+        <View style={[styles.heroSection, { paddingHorizontal: 20, paddingTop: 16 }]}>
           <View style={styles.heroInfo}>
             <View style={styles.titleRow}>
               <Text style={[styles.libName, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
@@ -101,9 +111,9 @@ export default function LibraryDetailScreen() {
                 {library.rating}
               </Text>
               <Text style={[styles.dot, { color: colors.border }]}>•</Text>
-              <View style={[styles.openDot, { backgroundColor: library.isOpen ? colors.success : colors.destructive }]} />
-              <Text style={[styles.openText, { color: library.isOpen ? colors.success : colors.destructive, fontFamily: "Poppins_500Medium" }]}>
-                {library.isOpen ? `Open until ${library.closeTime}` : "Closed"}
+              <MaterialCommunityIcons name="account" size={13} color={colors.mutedForeground} />
+              <Text style={[styles.openText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+                {library.ownerName}
               </Text>
             </View>
           </View>
@@ -293,9 +303,13 @@ const styles = StyleSheet.create({
   noLib: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   headerBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 12, borderBottomWidth: 1 },
   headerTitle: { fontSize: 17 },
-  heroSection: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
-  heroBox: { width: 72, height: 72, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  heroInfo: { flex: 1, gap: 4 },
+  heroImageWrapper: { position: "relative", height: 200, width: "100%" },
+  heroImage: { width: "100%", height: "100%" },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.15)" },
+  openBadge: { position: "absolute", bottom: 12, left: 12, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
+  openBadgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  heroSection: { gap: 4 },
+  heroInfo: { gap: 4 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   libName: { fontSize: 17, flex: 1 },
   libAddress: { fontSize: 13 },

@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import type { Library } from "@/context/DataContext";
 
@@ -35,90 +35,76 @@ export function LibraryCard({ library }: LibraryCardProps) {
       ]}
       onPress={() => router.push(`/(student)/library/${library.id}` as any)}
     >
-      <View style={styles.header}>
-        <View style={[styles.logoBox, { backgroundColor: colors.primary + "20" }]}>
-          <MaterialCommunityIcons name="book-open-variant" size={26} color={colors.primary} />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: library.image }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <View style={[styles.imageBadge, { backgroundColor: library.isOpen ? colors.success : colors.destructive }]}>
+          <Text style={styles.imageBadgeText}>{library.isOpen ? "Open" : "Closed"}</Text>
         </View>
-        <View style={styles.headerInfo}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.name, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]} numberOfLines={1}>
-              {library.name}
-            </Text>
-            {library.isVerified && (
-              <MaterialCommunityIcons name="check-decagram" size={16} color={colors.info} style={{ marginLeft: 4 }} />
-            )}
-          </View>
-          <Text style={[styles.area, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-            {library.area}, {library.city}
-          </Text>
-          <View style={styles.ratingRow}>
-            <Feather name="star" size={12} color={colors.primary} />
-            <Text style={[styles.ratingText, { color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>
-              {library.rating}
-            </Text>
-            <Text style={[styles.dot, { color: colors.mutedForeground }]}>•</Text>
-            <View style={[styles.statusDot, { backgroundColor: library.isOpen ? colors.success : colors.destructive }]} />
-            <Text style={[styles.statusText, { color: library.isOpen ? colors.success : colors.destructive, fontFamily: "Poppins_400Regular" }]}>
-              {library.isOpen ? "Open" : "Closed"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-      <View style={styles.seatRow}>
-        <View style={styles.seatInfo}>
-          <Text style={[styles.seatCount, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
-            {library.availableSeats}
-          </Text>
-          <Text style={[styles.seatLabel, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-            seats free
-          </Text>
-        </View>
-        <View style={styles.progressWrap}>
-          <View style={[styles.progressBar, { backgroundColor: colors.muted }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${library.occupancyRate}%` as any, backgroundColor: occupancyColor },
-              ]}
-            />
-          </View>
-          <Text style={[styles.occupancy, { color: occupancyColor, fontFamily: "Poppins_500Medium" }]}>
-            {library.occupancyRate}% full
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.facilities}>
-        {library.facilities.slice(0, 4).map(f => (
-          <View key={f} style={[styles.facilityChip, { backgroundColor: colors.muted }]}>
-            <MaterialCommunityIcons name={FACILITY_ICONS[f] as any ?? "check"} size={11} color={colors.mutedForeground} />
-            <Text style={[styles.facilityText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-              {f}
-            </Text>
-          </View>
-        ))}
-        {library.facilities.length > 4 && (
-          <View style={[styles.facilityChip, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.facilityText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-              +{library.facilities.length - 4}
-            </Text>
+        {library.isVerified && (
+          <View style={[styles.verifiedBadge, { backgroundColor: colors.card }]}>
+            <MaterialCommunityIcons name="check-decagram" size={14} color={colors.info} />
           </View>
         )}
       </View>
 
-      <View style={styles.planRow}>
-        <Text style={[styles.planLabel, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          From
+      <View style={styles.body}>
+        <View style={styles.titleRow}>
+          <Text style={[styles.name, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]} numberOfLines={1}>
+            {library.name}
+          </Text>
+        </View>
+        <Text style={[styles.area, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+          {library.area}, {library.city}
         </Text>
-        <Text style={[styles.planPrice, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
-          ₹{Math.min(...library.plans.map(p => p.price))}
+        <View style={styles.ratingRow}>
+          <Feather name="star" size={12} color={colors.primary} />
+          <Text style={[styles.ratingText, { color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>
+            {library.rating}
+          </Text>
+          <Text style={[styles.dot, { color: colors.mutedForeground }]}>•</Text>
+          <Text style={[styles.seatsText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+            <Text style={[{ color: colors.success, fontFamily: "Poppins_600SemiBold" }]}>{library.availableSeats}</Text> seats free
+          </Text>
+        </View>
+
+        <View style={[styles.progressBar, { backgroundColor: colors.muted, marginTop: 8 }]}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${library.occupancyRate}%` as any, backgroundColor: occupancyColor },
+            ]}
+          />
+        </View>
+        <Text style={[styles.occupancy, { color: occupancyColor, fontFamily: "Poppins_500Medium" }]}>
+          {library.occupancyRate}% full
         </Text>
-        <Text style={[styles.planCredits, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          / 15 credits
-        </Text>
+
+        <View style={styles.bottomRow}>
+          <View style={styles.facilities}>
+            {library.facilities.slice(0, 3).map(f => (
+              <View key={f} style={[styles.facilityChip, { backgroundColor: colors.muted }]}>
+                <MaterialCommunityIcons name={FACILITY_ICONS[f] as any ?? "check"} size={11} color={colors.mutedForeground} />
+                <Text style={[styles.facilityText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+                  {f}
+                </Text>
+              </View>
+            ))}
+            {library.facilities.length > 3 && (
+              <View style={[styles.facilityChip, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.facilityText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+                  +{library.facilities.length - 3}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.planPrice, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
+            ₹{Math.min(...library.plans.map(p => p.price))}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -127,26 +113,44 @@ export function LibraryCard({ library }: LibraryCardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 16,
     borderWidth: 1,
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: 14,
+    overflow: "hidden",
   },
-  header: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
+  imageWrapper: {
+    position: "relative",
+    height: 140,
   },
-  logoBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  imageBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  imageBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  verifiedBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerInfo: {
-    flex: 1,
-    gap: 2,
+  body: {
+    padding: 14,
+    gap: 4,
   },
   titleRow: {
     flexDirection: "row",
@@ -158,12 +162,13 @@ const styles = StyleSheet.create({
   },
   area: {
     fontSize: 12,
+    marginTop: -2,
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 2,
+    gap: 5,
+    marginTop: 4,
   },
   ratingText: {
     fontSize: 12,
@@ -171,39 +176,11 @@ const styles = StyleSheet.create({
   dot: {
     fontSize: 12,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
+  seatsText: {
     fontSize: 12,
-  },
-  divider: {
-    height: 1,
-  },
-  seatRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  seatInfo: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  seatCount: {
-    fontSize: 20,
-  },
-  seatLabel: {
-    fontSize: 12,
-  },
-  progressWrap: {
-    flex: 1,
-    gap: 4,
   },
   progressBar: {
-    height: 6,
+    height: 5,
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -214,35 +191,32 @@ const styles = StyleSheet.create({
   occupancy: {
     fontSize: 11,
     textAlign: "right",
+    marginTop: 2,
+  },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
   },
   facilities: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 5,
+    flex: 1,
   },
   facilityChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 20,
   },
   facilityText: {
     fontSize: 11,
   },
-  planRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  planLabel: {
-    fontSize: 12,
-  },
   planPrice: {
-    fontSize: 18,
-  },
-  planCredits: {
-    fontSize: 12,
+    fontSize: 17,
   },
 });

@@ -20,6 +20,7 @@ export interface Library {
   openTime: string;
   closeTime: string;
   monthlyRevenue: number;
+  image: string;
 }
 
 export interface Plan {
@@ -129,6 +130,7 @@ const LIBRARIES: Library[] = [
     openTime: "06:00 AM",
     closeTime: "11:00 PM",
     monthlyRevenue: 145000,
+    image: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=600&q=80",
   },
   {
     id: "lib002",
@@ -157,6 +159,7 @@ const LIBRARIES: Library[] = [
     openTime: "06:00 AM",
     closeTime: "10:00 PM",
     monthlyRevenue: 212000,
+    image: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&q=80",
   },
   {
     id: "lib003",
@@ -185,6 +188,7 @@ const LIBRARIES: Library[] = [
     openTime: "05:30 AM",
     closeTime: "08:00 PM",
     monthlyRevenue: 98000,
+    image: "https://images.unsplash.com/photo-1568667256549-094345857637?w=600&q=80",
   },
   {
     id: "lib004",
@@ -212,6 +216,7 @@ const LIBRARIES: Library[] = [
     openTime: "07:00 AM",
     closeTime: "10:00 PM",
     monthlyRevenue: 56000,
+    image: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&q=80",
   },
 ];
 
