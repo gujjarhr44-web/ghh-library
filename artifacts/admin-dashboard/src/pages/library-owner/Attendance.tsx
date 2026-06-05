@@ -3,31 +3,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AttendanceLog } from "@workspace/api-client-react/src/generated/api.schemas";
+import { AttendanceEntry } from "@workspace/api-client-react/src/generated/api.schemas";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 
 export default function LibraryOwnerAttendance() {
   const { data: attendanceLogs, isLoading, isFetching } = useGetOwnerAttendance();
   const loading = isLoading || isFetching;
 
-  // Derive today's stats from logs
-  const todayStr = new Date().toLocaleDateString();
-  const todaysLogs = attendanceLogs?.filter(log => {
-    if (!log.entryTime && !log.exitTime) return false;
-    const logDate = log.entryTime ? new Date(log.entryTime) : new Date();
-    return logDate.toLocaleDateString() === todayStr;
-  }) || [];
-
-  const presentCount = todaysLogs.filter(log => log.status === 'present').length;
-  const absentCount = attendanceLogs?.filter(log => log.status === 'absent' && new Date(log.entryTime || Date.now()).toLocaleDateString() === todayStr).length || 0;
-  const leaveCount = attendanceLogs?.filter(log => log.status === 'leave').length || 0; // Simplified
+  const presentCount = attendanceLogs?.filter(log => log.status === 'present').length || 0;
+  const absentCount = attendanceLogs?.filter(log => log.status === 'absent').length || 0;
+  const leaveCount = attendanceLogs?.filter(log => log.status === 'leave').length || 0;
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present': return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-100";
       case 'absent': return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-100";
       case 'leave': return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-100";
-      case 'late': return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-100";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -114,33 +105,24 @@ export default function LibraryOwnerAttendance() {
                     </TableRow>
                   ))
                 ) : attendanceLogs && attendanceLogs.length > 0 ? (
-                  attendanceLogs.map((log: AttendanceLog) => {
-                    // Calculate mock duration if entry/exit exist
-                    let duration = "-";
-                    if (log.entryTime && log.exitTime) {
-                      const diff = new Date(log.exitTime).getTime() - new Date(log.entryTime).getTime();
-                      const hours = Math.floor(diff / (1000 * 60 * 60));
-                      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                      duration = `${hours}h ${mins}m`;
-                    }
-
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-medium">{log.studentName}</TableCell>
-                        <TableCell>{log.seatNumber || '-'}</TableCell>
-                        <TableCell>{log.shiftName}</TableCell>
-                        <TableCell>{log.entryTime ? new Date(log.entryTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</TableCell>
-                        <TableCell>{log.exitTime ? new Date(log.exitTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}</TableCell>
-                        <TableCell className="text-muted-foreground">{duration}</TableCell>
-                        <TableCell className="text-right font-mono text-red-500">-{log.creditsDeducted}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className={getStatusColor(log.status)}>
-                            {log.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                  attendanceLogs.map((log: AttendanceEntry) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="font-medium">{log.studentName}</TableCell>
+                      <TableCell>{log.seat || '-'}</TableCell>
+                      <TableCell>{log.shift}</TableCell>
+                      <TableCell>{log.entryTime || '-'}</TableCell>
+                      <TableCell>{log.exitTime || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{log.duration || '-'}</TableCell>
+                      <TableCell className="text-right font-mono text-red-500">
+                        {log.creditDeducted != null ? `-${log.creditDeducted}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={getStatusColor(log.status)}>
+                          {log.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">

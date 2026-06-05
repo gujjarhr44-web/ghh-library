@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Badge, Clock, Plus, Users } from "lucide-react";
+import { Clock, Plus, Users } from "lucide-react";
 import { Shift } from "@workspace/api-client-react/src/generated/api.schemas";
 
 export default function LibraryOwnerShifts() {
@@ -146,13 +147,15 @@ export default function LibraryOwnerShifts() {
           ))
         ) : shifts && shifts.length > 0 ? (
           shifts.map((shift: Shift) => {
-            const occupancyPercent = Math.round((shift.enrolledStudents / shift.capacity) * 100);
+            const enrolled = shift.enrolled ?? 0;
+            const cap = shift.capacity ?? 1;
+            const occupancyPercent = Math.round((enrolled / cap) * 100);
             return (
               <Card key={shift.id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="flex justify-between items-center">
                     <span>{shift.name}</span>
-                    <Badge variant="outline">{shift.enrolledStudents} enrolled</Badge>
+                    <Badge variant="outline">{enrolled} enrolled</Badge>
                   </CardTitle>
                   <CardDescription className="flex items-center gap-2 mt-2 font-medium text-foreground/80">
                     <Clock className="h-4 w-4 text-primary" />
@@ -164,7 +167,7 @@ export default function LibraryOwnerShifts() {
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Users className="h-4 w-4" /> Capacity
                     </span>
-                    <span className="font-medium">{shift.enrolledStudents} / {shift.capacity}</span>
+                    <span className="font-medium">{enrolled} / {cap}</span>
                   </div>
                   <Progress value={occupancyPercent} className="h-2" />
                   <p className="text-xs text-right mt-2 text-muted-foreground">

@@ -138,12 +138,12 @@ export default function SuperAdminLibraries() {
                       <TableCell className="font-medium">{lib.name}</TableCell>
                       <TableCell>
                         <div>{lib.ownerName}</div>
-                        <div className="text-xs text-muted-foreground">{lib.ownerMobile}</div>
+                        <div className="text-xs text-muted-foreground">{lib.mobile}</div>
                       </TableCell>
                       <TableCell>{lib.city}</TableCell>
                       <TableCell className="text-right">{lib.totalSeats}</TableCell>
                       <TableCell className="text-right">{lib.activeStudents}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(lib.revenue)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(lib.monthlyRevenue)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getStatusColor(lib.status)}>
                           {lib.status}

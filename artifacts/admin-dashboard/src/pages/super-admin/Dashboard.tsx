@@ -96,8 +96,8 @@ export default function SuperAdminDashboard() {
     { label: "Active Libraries", value: stats?.activeLibraries || 0 },
     { label: "Total Students", value: stats?.totalStudents || 0 },
     { label: "Active Students", value: stats?.activeStudents || 0 },
-    { label: "Daily Attendance", value: stats?.todayAttendance || 0 },
-    { label: "Available Seats", value: stats?.totalAvailableSeats || 0 },
+    { label: "Daily Attendance", value: stats?.dailyAttendance || 0 },
+    { label: "Available Seats", value: stats?.availableSeats || 0 },
     { label: "Monthly Revenue", value: stats?.monthlyRevenue || 0, isCurrency: true },
     { label: "Pending Approvals", value: stats?.pendingApprovals || 0, isRed: (stats?.pendingApprovals || 0) > 0 },
   ];

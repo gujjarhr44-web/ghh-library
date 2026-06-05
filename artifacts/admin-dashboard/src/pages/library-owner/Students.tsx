@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { OwnerStudent } from "@workspace/api-client-react/src/generated/api.schemas";
@@ -20,7 +20,6 @@ export default function LibraryOwnerStudents() {
   const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<OwnerStudent | null>(null);
   
-  // Modal state
   const [creditAmount, setCreditAmount] = useState("10");
   const [creditReason, setCreditReason] = useState("");
 
@@ -46,8 +45,8 @@ export default function LibraryOwnerStudents() {
     
     adjustCredits.mutate(
       { 
-        id: selectedStudent.id, 
         data: { 
+          studentId: selectedStudent.id,
           amount: parseInt(creditAmount), 
           reason: creditReason || "Manual adjustment" 
         } 
@@ -146,14 +145,14 @@ export default function LibraryOwnerStudents() {
                         <div className="text-xs text-muted-foreground">{student.email}</div>
                       </TableCell>
                       <TableCell>{student.phone}</TableCell>
-                      <TableCell>{student.seatNumber}</TableCell>
-                      <TableCell>{student.shiftName}</TableCell>
+                      <TableCell>{student.seat}</TableCell>
+                      <TableCell>{student.shift}</TableCell>
                       <TableCell className="text-right">
-                        <span className={`font-medium ${student.creditsBalance < 5 ? 'text-amber-600 dark:text-amber-500' : ''}`}>
-                          {student.creditsBalance}
+                        <span className={`font-medium ${student.creditsRemaining < 5 ? 'text-amber-600 dark:text-amber-500' : ''}`}>
+                          {student.creditsRemaining}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">{student.attendancePercent}%</TableCell>
+                      <TableCell className="text-right">{student.attendance}%</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getStatusColor(student.status)}>
                           {student.status}

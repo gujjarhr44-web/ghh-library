@@ -22,7 +22,7 @@ export default function SuperAdminStudents() {
     const matchesSearch = 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.libraryName.toLowerCase().includes(searchTerm.toLowerCase());
+      student.library.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || student.status.toLowerCase() === statusFilter;
     
@@ -102,10 +102,10 @@ export default function SuperAdminStudents() {
                         <div className="font-medium">{student.name}</div>
                         <div className="text-xs text-muted-foreground">{student.email}</div>
                       </TableCell>
-                      <TableCell>{student.libraryName}</TableCell>
-                      <TableCell>{student.seatNumber}</TableCell>
-                      <TableCell>{student.planType}</TableCell>
-                      <TableCell className="text-right font-medium">{student.creditsBalance}</TableCell>
+                      <TableCell>{student.library}</TableCell>
+                      <TableCell>{student.seat}</TableCell>
+                      <TableCell>{student.plan}</TableCell>
+                      <TableCell className="text-right font-medium">{student.creditsRemaining}</TableCell>
                       <TableCell className="text-right">{student.attendancePercent}%</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getStatusColor(student.status)}>

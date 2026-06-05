@@ -66,11 +66,11 @@ export default function SuperAdminAttendance() {
                   attendanceLogs.map((log: AttendanceLog) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-medium">{log.studentName}</TableCell>
-                      <TableCell>{log.libraryName}</TableCell>
-                      <TableCell>{log.shiftName}</TableCell>
+                      <TableCell>{log.library}</TableCell>
+                      <TableCell>{log.shift}</TableCell>
                       <TableCell>{log.entryTime || '-'}</TableCell>
                       <TableCell>{log.exitTime || '-'}</TableCell>
-                      <TableCell className="text-right font-mono">{log.creditsDeducted}</TableCell>
+                      <TableCell className="text-right font-mono">{log.creditsDeducted ?? '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getStatusColor(log.status)}>
                           {log.status}

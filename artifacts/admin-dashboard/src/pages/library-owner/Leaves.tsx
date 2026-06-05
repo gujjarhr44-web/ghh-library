@@ -18,7 +18,7 @@ export default function LibraryOwnerLeaves() {
 
   const handleApprove = (id: string) => {
     approveLeave.mutate(
-      { id, data: { status: "approved" } },
+      { id },
       {
         onSuccess: () => {
           toast({ title: "Leave Approved", description: "The leave request has been approved." });
@@ -33,7 +33,7 @@ export default function LibraryOwnerLeaves() {
 
   const handleReject = (id: string) => {
     rejectLeave.mutate(
-      { id, data: { status: "rejected" } },
+      { id },
       {
         onSuccess: () => {
           toast({ title: "Leave Rejected", description: "The leave request has been rejected." });
@@ -105,7 +105,7 @@ export default function LibraryOwnerLeaves() {
                   leaves.map((leave: LeaveRequest) => (
                     <TableRow key={leave.id}>
                       <TableCell className="font-medium">{leave.studentName}</TableCell>
-                      <TableCell>{leave.seatNumber}</TableCell>
+                      <TableCell>{leave.seat || '-'}</TableCell>
                       <TableCell>{new Date(leave.date).toLocaleDateString()}</TableCell>
                       <TableCell className="text-muted-foreground max-w-xs truncate" title={leave.reason}>{leave.reason}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">

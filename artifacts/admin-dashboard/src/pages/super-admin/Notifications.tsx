@@ -163,7 +163,7 @@ export default function SuperAdminNotifications() {
                     <h3 className="font-semibold">{notification.title}</h3>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="capitalize border px-2 py-0.5 rounded-full">{notification.target}</span>
-                      <span>{new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span>{new Date(notification.sentAt).toLocaleDateString()} {new Date(notification.sentAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                   </div>
                   <Badge variant="outline" className={`mb-2 capitalize ${getTypeColor(notification.type)}`}>
