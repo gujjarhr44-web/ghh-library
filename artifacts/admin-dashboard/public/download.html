@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHH Library - App Download</title>
+  <meta name="description" content="GHH Library App डाउनलोड करें - Smart Library Management System" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary: #4F8EF7;
+      --primary-dark: #2563EB;
+      --secondary: #7C3AED;
+      --accent: #06B6D4;
+      --bg: #0A0F1E;
+      --bg-card: #111827;
+      --bg-card2: #1a2236;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: rgba(79, 142, 247, 0.2);
+      --glow: rgba(79, 142, 247, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 { width: 500px; height: 500px; background: var(--primary); top: -100px; left: -100px; animation-delay: 0s; }
+    .orb-2 { width: 400px; height: 400px; background: var(--secondary); bottom: -100px; right: -100px; animation-delay: 3s; }
+    .orb-3 { width: 300px; height: 300px; background: var(--accent); top: 50%; left: 50%; animation-delay: 6s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(20px, -20px) scale(1.05); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    .logo-ring {
+      width: 90px;
+      height: 90px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 42px;
+      box-shadow: 0 0 40px var(--glow);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 30px var(--glow); }
+      50% { box-shadow: 0 0 60px var(--glow), 0 0 100px rgba(79,142,247,0.2); }
+    }
+    .app-name {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .app-tagline {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+    .version-badge {
+      display: inline-block;
+      background: rgba(79, 142, 247, 0.15);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      padding: 4px 14px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Main cards grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    @media (max-width: 640px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(79,142,247,0.05), transparent);
+      pointer-events: none;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px var(--glow);
+    }
+
+    /* QR Card */
+    .qr-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .qr-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .qr-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .qr-wrapper {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      display: inline-block;
+      box-shadow: 0 0 30px rgba(79,142,247,0.3);
+    }
+    #qrcode canvas {
+      display: block;
+    }
+
+    /* Download Card */
+    .download-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .download-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .download-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      text-decoration: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(79,142,247,0.4);
+      border: none;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(79,142,247,0.6);
+    }
+    .btn-download svg { flex-shrink: 0; }
+    
+    .file-info {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .info-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Features */
+    .features-card {
+      grid-column: 1 / -1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px;
+    }
+    .features-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.8rem;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      background: rgba(79, 142, 247, 0.1);
+      flex-shrink: 0;
+    }
+    .feature-text strong {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .feature-text span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Admin panel link */
+    .admin-link {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .btn-admin {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      color: #a78bfa;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .btn-admin:hover {
+      background: rgba(124, 58, 237, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(124,58,237,0.3);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+      flex-direction: column;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: white;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-ring">📚</div>
+      <h1 class="app-name">GHH Library</h1>
+      <p class="app-tagline">Smart Library Management System</p>
+      <div class="version-badge">Version 1.0.0 • Android</div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+
+      <!-- QR Code Card -->
+      <div class="card qr-card">
+        <h3>📱 QR Code से डाउनलोड करें</h3>
+        <p>कैमरा खोलें और QR scan करें</p>
+        <div class="qr-wrapper">
+          <div id="qrcode"></div>
+        </div>
+        <p style="margin-top: 14px; font-size: 0.78rem; color: var(--text-muted);">
+          किसी भी Android device पर काम करेगा
+        </p>
+      </div>
+
+      <!-- Download Card -->
+      <div class="card download-card">
+        <div>
+          <h3>⬇️ APK डाउनलोड करें</h3>
+          <p>
+            अपने Android phone पर GHH Library app install करें।
+            Library seat booking, attendance और बहुत कुछ - सब एक जगह।
+          </p>
+
+          <a id="apk-btn" class="btn-download" href="#" download>
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            APK Download करें (Free)
+          </a>
+
+          <div class="file-info">
+            <div class="info-chip">📦 ~25 MB</div>
+            <div class="info-chip">🤖 Android 7+</div>
+            <div class="info-chip">✅ Safe</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="divider"></div>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0;">Install steps:</p>
+          <div class="steps">
+            <div class="step"><div class="step-num">1</div> APK file download करें</div>
+            <div class="step"><div class="step-num">2</div> "Unknown Sources" allow करें settings में</div>
+            <div class="step"><div class="step-num">3</div> APK file open करके Install करें</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Card -->
+      <div class="card features-card">
+        <h3>✨ App Features</h3>
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-icon">🪑</div>
+            <div class="feature-text">
+              <strong>Seat Booking</strong>
+              <span>Online seat reserve करें</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📅</div>
+            <div class="feature-text">
+              <strong>Attendance</strong>
+              <span>Daily attendance track करें</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">💳</div>
+            <div class="feature-text">
+              <strong>Plan Purchase</strong>
+              <span>Monthly/Quarterly plans</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🏖️</div>
+            <div class="feature-text">
+              <strong>Leave Apply</strong>
+              <span>Online छुट्टी apply करें</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📊</div>
+            <div class="feature-text">
+              <strong>Stats & Reports</strong>
+              <span>अपनी progress देखें</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔔</div>
+            <div class="feature-text">
+              <strong>Notifications</strong>
+              <span>Important updates पाएं</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Panel Link -->
+    <div class="admin-link">
+      <a href="/admin" class="btn-admin">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        Admin Panel खोलें
+      </a>
+      <p style="color: var(--text-muted); font-size: 0.78rem; margin-top: 10px;">
+        Library owner और admin के लिए
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2025 GHH Library • सभी अधिकार सुरक्षित</p>
+      <p style="margin-top: 6px;">Built with ❤️ for smart library management</p>
+    </footer>
+  </div>
+
+  <script>
+    // APK download URL — Render deploy के बाद यहाँ real link आएगी
+    const APK_URL = window.location.origin + "/ghh-library.apk";
+    const DOWNLOAD_PAGE_URL = window.location.href;
+
+    // Set download button href
+    document.getElementById("apk-btn").href = APK_URL;
+
+    // Generate QR code for this download page
+    QRCode.toCanvas(document.createElement('canvas'), DOWNLOAD_PAGE_URL, {
+      width: 200,
+      margin: 1,
+      color: { dark: '#0A0F1E', light: '#ffffff' }
+    }, function (error, canvas) {
+      if (error) {
+        // Fallback: use QRCode differently
+        const div = document.getElementById('qrcode');
+        new QRCode(div, {
+          text: DOWNLOAD_PAGE_URL,
+          width: 200,
+          height: 200,
+          colorDark: "#0A0F1E",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        return;
+      }
+      document.getElementById('qrcode').appendChild(canvas);
+    });
+  </script>
+  <!-- Fallback QR library -->
+  <script>
+    if (document.getElementById('qrcode').children.length === 0) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+      s.onload = function() {
+        new QRCode(document.getElementById("qrcode"), {
+          text: window.location.href,
+          width: 200,
+          height: 200,
+          colorDark: "#0A0F1E",
+          colorLight: "#ffffff"
+        });
+      };
+      document.head.appendChild(s);
+    }
+  </script>
+</body>
+</html>

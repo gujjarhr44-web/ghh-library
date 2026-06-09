@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, type UserRole } from "@/context/AuthContext";
+import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
 
 const { width } = Dimensions.get("window");
@@ -26,6 +27,7 @@ export default function WelcomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, isLoading } = useAuth();
+  const { settings } = useData();
   const [selected, setSelected] = useState<UserRole>("student");
 
   useEffect(() => {
@@ -60,17 +62,17 @@ export default function WelcomeScreen() {
           </View>
           <View>
             <Text style={[styles.brand, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
-              GHH Library
+              {settings.appTitle || "GHH Library"}
             </Text>
             <Text style={[styles.tagline, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-              Smart Library Management
+              {settings.welcomeSubheading || "Smart Library Management"}
             </Text>
           </View>
         </View>
 
         <View style={styles.hero}>
           <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
-            Study Smarter,{"\n"}Pay Only for{"\n"}What You Attend
+            {settings.welcomeMessage || `Study Smarter,\nPay Only for\nWhat You Attend`}
           </Text>
           <Text style={[styles.heroSub, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
             Revolutionary Pay-Per-Attendance credit system. No wasted days, full value guaranteed.

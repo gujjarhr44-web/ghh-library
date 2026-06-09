@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetOwnerStudents, useAdjustStudentCredits } from "@workspace/api-client-react";
+import { useButtonEnabled, useFeature } from "@/lib/settings-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,10 @@ export default function LibraryOwnerStudents() {
   
   const [creditAmount, setCreditAmount] = useState("10");
   const [creditReason, setCreditReason] = useState("");
+
+  // CMS controls
+  const canAdjustCredits = useButtonEnabled("btn.adjust_credits");
+  const showSearch = useFeature("feature.search_bars", true);
 
   const { data: students, isLoading, isFetching, refetch } = useGetOwnerStudents();
   const adjustCredits = useAdjustStudentCredits();
@@ -159,9 +164,11 @@ export default function LibraryOwnerStudents() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => openCreditModal(student)}>
-                          <Plus className="h-4 w-4 mr-1" /> Add
-                        </Button>
+                        {canAdjustCredits && (
+                          <Button variant="outline" size="sm" onClick={() => openCreditModal(student)}>
+                            <Plus className="h-4 w-4 mr-1" /> Add
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

@@ -1,4 +1,5 @@
 import { useTheme } from "@/components/theme-provider";
+import { useText, useFeature } from "@/lib/settings-context";
 import { 
   useGetAdminStats, 
   useGetStudentGrowthChart, 
@@ -86,9 +87,14 @@ export default function SuperAdminDashboard() {
   const loadingAtt = isLoadingAtt || isFetchingAtt;
   const loadingLib = isLoadingLib || isFetchingLib;
 
+  // CMS-controlled text and features
+  const greeting = useText("dashboard.greeting", "Good Morning");
+  const welcomeText = useText("dashboard.welcome_text", "Here's what's happening in your libraries today");
+  const showCharts = useFeature("feature.charts", true);
+
   // Derive top 3 libraries by revenue
   const topLibraries = libraries 
-    ? [...libraries].sort((a, b) => b.revenue - a.revenue).slice(0, 3).map(l => ({ name: l.name, revenue: l.revenue }))
+    ? [...libraries].sort((a, b) => (b.monthlyRevenue || 0) - (a.monthlyRevenue || 0)).slice(0, 3).map(l => ({ name: l.name, revenue: l.monthlyRevenue || 0 }))
     : [];
 
   const kpis = [
@@ -105,8 +111,8 @@ export default function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Platform overview and key metrics.</p>
+        <h1 className="text-3xl font-bold tracking-tight">{greeting} 👋</h1>
+        <p className="text-muted-foreground mt-1">{welcomeText}</p>
       </div>
 
       {/* KPIs */}
@@ -136,6 +142,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Charts Grid */}
+      {showCharts && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Student Growth */}
@@ -143,7 +150,7 @@ export default function SuperAdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Student Growth</CardTitle>
             {!loadingSG && studentGrowth && studentGrowth.length > 0 && (
-              <CSVLink data={studentGrowth} filename="student-growth.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(studentGrowth) ? studentGrowth : []} filename="student-growth.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}
@@ -180,7 +187,7 @@ export default function SuperAdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Monthly Revenue</CardTitle>
             {!loadingRev && revenueTrend && revenueTrend.length > 0 && (
-              <CSVLink data={revenueTrend} filename="revenue-trend.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(revenueTrend) ? revenueTrend : []} filename="revenue-trend.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}
@@ -206,7 +213,7 @@ export default function SuperAdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Attendance Trend</CardTitle>
             {!loadingAtt && attendanceTrend && attendanceTrend.length > 0 && (
-              <CSVLink data={attendanceTrend} filename="attendance-trend.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(attendanceTrend) ? attendanceTrend : []} filename="attendance-trend.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}
@@ -238,7 +245,7 @@ export default function SuperAdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Top Libraries by Revenue</CardTitle>
             {!loadingLib && topLibraries.length > 0 && (
-              <CSVLink data={topLibraries} filename="top-libraries.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(topLibraries) ? topLibraries : []} filename="top-libraries.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}
@@ -259,6 +266,7 @@ export default function SuperAdminDashboard() {
         </Card>
 
       </div>
+      )}
     </div>
   );
 }

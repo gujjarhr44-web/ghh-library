@@ -1,6 +1,6 @@
 import { useColorScheme } from "react-native";
-
 import colors from "@/constants/colors";
+import { useData } from "@/context/DataContext";
 
 /**
  * Returns the design tokens for the current color scheme.
@@ -20,5 +20,16 @@ export function useColors() {
     scheme === "dark" && "dark" in colors
       ? (colors as Record<string, typeof colors.light>).dark
       : colors.light;
-  return { ...palette, radius: colors.radius };
+
+  let primaryColor = palette.primary;
+  try {
+    const data = useData();
+    if (data && data.settings && data.settings.themeColor) {
+      primaryColor = data.settings.themeColor;
+    }
+  } catch (e) {
+    // Fallback if context is not available yet
+  }
+
+  return { ...palette, primary: primaryColor, radius: colors.radius };
 }

@@ -1,4 +1,5 @@
 import { useGetAdminPayments } from "@workspace/api-client-react";
+import { useFeature } from "@/lib/settings-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,9 @@ function formatCurrency(value: number): string {
 export default function SuperAdminPayments() {
   const { data: payments, isLoading, isFetching } = useGetAdminPayments();
   const loading = isLoading || isFetching;
+
+  // CMS feature flags
+  const showExport = useFeature("feature.export_buttons", true);
 
   const totalCollections = payments?.filter(p => p.status === 'success').reduce((acc, p) => acc + p.amount, 0) || 0;
   const todaysCollections = payments?.filter(p => {
@@ -45,8 +49,8 @@ export default function SuperAdminPayments() {
           <p className="text-muted-foreground mt-1">Monitor all platform transactions.</p>
         </div>
         <div className="flex items-center gap-2">
-          {!loading && payments && payments.length > 0 && (
-            <CSVLink data={payments} filename="payments.csv">
+          {showExport && !loading && payments && payments.length > 0 && (
+            <CSVLink data={Array.isArray(payments) ? payments : []} filename="payments.csv">
               <Button variant="outline" size="sm" className="h-9">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV

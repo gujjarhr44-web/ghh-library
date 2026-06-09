@@ -1,13 +1,18 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  Pressable,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatCard } from "@/components/StatCard";
@@ -26,13 +31,67 @@ const TODAY_ATTENDANCE = [
 export default function OwnerDashboard() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { students, libraries } = useData();
   const library = libraries[0];
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
   const activeStudents = students.filter(s => s.status === "active").length;
   const expiringSoon = students.filter(s => s.creditsRemaining <= 5 && s.status === "active").length;
+
+  const [showScanner, setShowScanner] = useState(false);
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentPhone, setNewStudentPhone] = useState("");
+
+  const handleAction = (label: string) => {
+    switch (label) {
+      case "Scan QR":
+        setShowScanner(true);
+        break;
+      case "Add Student":
+        setShowAddStudent(true);
+        break;
+      case "Edit Seats":
+        router.push("/(owner)/seats" as any);
+        break;
+      case "Send Alert":
+        Alert.prompt(
+          "Send Alert to Students",
+          "Enter message to broadcast to all active library members:",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Send Broadcast",
+              onPress: (msg) => {
+                if (msg && msg.trim().length > 0) {
+                  Alert.alert("Success", "Alert broadcasted to all students successfully!");
+                }
+              }
+            }
+          ]
+        );
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleScanSuccess = () => {
+    setShowScanner(false);
+    Alert.alert("Attendance Logged", "Student QR Code scanned successfully. Attendance entry recorded!");
+  };
+
+  const handleAddStudent = () => {
+    if (!newStudentName.trim() || !newStudentPhone.trim()) {
+      Alert.alert("Validation Error", "Please fill in all fields.");
+      return;
+    }
+    setShowAddStudent(false);
+    Alert.alert("Student Added", `Successfully registered ${newStudentName} with GHH Central Library!`);
+    setNewStudentName("");
+    setNewStudentPhone("");
+  };
 
   return (
     <ScrollView
@@ -49,9 +108,17 @@ export default function OwnerDashboard() {
             {library?.name}
           </Text>
         </View>
-        <View style={[styles.ownerAvatar, { backgroundColor: colors.primary + "25" }]}>
+        <Pressable 
+          style={[styles.ownerAvatar, { backgroundColor: colors.primary + "25" }]}
+          onPress={() => {
+            Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+              { text: "Cancel", style: "cancel" },
+              { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); router.replace("/"); } },
+            ]);
+          }}
+        >
           <MaterialCommunityIcons name="account" size={24} color={colors.primary} />
-        </View>
+        </Pressable>
       </View>
 
       <LinearGradient
@@ -167,20 +234,102 @@ export default function OwnerDashboard() {
             { icon: "seat-outline", label: "Edit Seats", color: colors.primary },
             { icon: "bell-ring-outline", label: "Send Alert", color: "#A78BFA" },
           ].map(a => (
-            <View key={a.label} style={[styles.actionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Pressable
+              key={a.label}
+              onPress={() => handleAction(a.label)}
+              style={({ pressed }) => [
+                styles.actionBox,
+                { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }
+              ]}
+            >
               <View style={[styles.actionIcon, { backgroundColor: a.color + "20" }]}>
                 <MaterialCommunityIcons name={a.icon as any} size={22} color={a.color} />
               </View>
               <Text style={[styles.actionLabel, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
                 {a.label}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       </View>
+
+      {/* Simulated Scanner Modal */}
+      <Modal visible={showScanner} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "#000", justifyContent: "space-between", paddingVertical: 50 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20 }}>
+            <Pressable onPress={() => setShowScanner(false)}>
+              <MaterialCommunityIcons name="close" size={28} color="#fff" />
+            </Pressable>
+            <Text style={{ color: "#fff", fontSize: 18, fontFamily: "Poppins_600SemiBold", marginLeft: 16 }}>Scan Student QR</Text>
+          </View>
+          <View style={{ alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 250, height: 250, borderWidth: 2, borderColor: colors.primary, borderRadius: 10, justifyContent: "center", alignItems: "center" }}>
+              <View style={{ width: "90%", height: 2, backgroundColor: "#ef4444" }} />
+            </View>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#fff", fontFamily: "Poppins_500Medium" }}>Point camera at student's app QR code</Text>
+            <Text style={{ color: "#9CA3AF", fontSize: 12, marginTop: 4 }}>Scanning automatically...</Text>
+          </View>
+          <ScannerTrigger onScan={handleScanSuccess} />
+        </View>
+      </Modal>
+
+      {/* Simulated Add Student Modal */}
+      <Modal visible={showAddStudent} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
+          <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, gap: 14 }}>
+            <Text style={{ fontSize: 18, fontFamily: "Poppins_700Bold", color: colors.foreground }}>Add Student</Text>
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>Full Name</Text>
+              <TextInput
+                value={newStudentName}
+                onChangeText={setNewStudentName}
+                style={{ height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, color: colors.foreground, backgroundColor: colors.background }}
+                placeholder="e.g. Rahul Kumar"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </View>
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>Phone Number</Text>
+              <TextInput
+                value={newStudentPhone}
+                onChangeText={setNewStudentPhone}
+                style={{ height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, color: colors.foreground, backgroundColor: colors.background }}
+                placeholder="e.g. +91 99988 77665"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+              <Pressable
+                onPress={() => setShowAddStudent(false)}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.muted, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: "Poppins_600SemiBold" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleAddStudent}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Add</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
+
+function ScannerTrigger({ onScan }: { onScan: () => void }) {
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onScan();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+  return null;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

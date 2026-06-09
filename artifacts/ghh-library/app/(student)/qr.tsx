@@ -9,6 +9,8 @@ import {
   StyleSheet,
   Text,
   View,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,9 +24,10 @@ export default function QRScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { wallet, attendanceRecords } = useData();
+  const { wallet, attendanceRecords, settings, addAttendanceRecord } = useData();
   const [mode, setMode] = useState<ScanMode>("entry");
   const [scanned, setScanned] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
@@ -41,8 +44,19 @@ export default function QRScreen() {
   const lastRecord = attendanceRecords[0];
 
   const handleMarkAttendance = () => {
+    if (!settings.isMarkAttendanceClickable) {
+      Alert.alert("Feature Disabled", "Attendance marking has been disabled by the admin.");
+      return;
+    }
+    // Launch simulated working QR camera scanner
+    setShowScanner(true);
+  };
+
+  const handleScanSuccess = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setScanned(true);
+    addAttendanceRecord(mode === "entry");
+    setShowScanner(false);
     setTimeout(() => setScanned(false), 3000);
     Alert.alert(
       mode === "entry" ? "Entry Marked!" : "Exit Marked!",
@@ -63,7 +77,7 @@ export default function QRScreen() {
           Attendance QR
         </Text>
         <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          Show this QR code at the library scanner
+          {!settings.isMarkAttendanceClickable ? "Attendance marking is currently disabled by the admin." : "Show this QR code at the library scanner"}
         </Text>
       </View>
 
@@ -128,7 +142,7 @@ export default function QRScreen() {
 
         <View style={[styles.qrInner, {
           backgroundColor: "#FFFFFF",
-          opacity: scanned ? 0.3 : 1,
+          opacity: scanned || !settings.isMarkAttendanceClickable ? 0.3 : 1,
         }]}>
           <QRCode
             value={qrData}
@@ -147,21 +161,36 @@ export default function QRScreen() {
           </View>
         )}
 
+        {!settings.isMarkAttendanceClickable && (
+          <View style={styles.scannedOverlay}>
+            <MaterialCommunityIcons name="alert-circle" size={64} color={colors.destructive} />
+            <Text style={[styles.scannedText, { color: colors.destructive, fontFamily: "Poppins_700Bold" }]}>
+              Disabled
+            </Text>
+          </View>
+        )}
+
         <Text style={[styles.qrRefresh, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          QR refreshes every 60 seconds for security
+          {!settings.isMarkAttendanceClickable ? "QR code scanning is disabled by the admin" : "QR refreshes every 60 seconds for security"}
         </Text>
       </View>
 
       <Pressable
         style={({ pressed }) => [
           styles.scanBtn,
-          { marginHorizontal: 20, marginTop: 16, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+          { 
+            marginHorizontal: 20, 
+            marginTop: 16, 
+            backgroundColor: !settings.isMarkAttendanceClickable ? colors.border : colors.primary, 
+            opacity: pressed && settings.isMarkAttendanceClickable ? 0.85 : 1 
+          },
         ]}
         onPress={handleMarkAttendance}
+        disabled={!settings.isMarkAttendanceClickable}
       >
-        <MaterialCommunityIcons name={mode === "entry" ? "login" : "logout"} size={20} color="#fff" />
-        <Text style={[styles.scanBtnText, { fontFamily: "Poppins_600SemiBold" }]}>
-          Mark {mode === "entry" ? "Entry" : "Exit"}
+        <MaterialCommunityIcons name={mode === "entry" ? "login" : "logout"} size={20} color={settings.isMarkAttendanceClickable ? "#fff" : colors.mutedForeground} />
+        <Text style={[styles.scanBtnText, { color: settings.isMarkAttendanceClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+          {!settings.isMarkAttendanceClickable ? "Attendance Marking Disabled" : `Mark ${mode === "entry" ? "Entry" : "Exit"}`}
         </Text>
       </Pressable>
 
@@ -192,8 +221,59 @@ export default function QRScreen() {
           </View>
         </View>
       )}
+
+      {/* Working QR Scanner Simulation Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View style={[styles.scannerContainer, { backgroundColor: "#000" }]}>
+          <View style={styles.scannerHeader}>
+            <Pressable style={styles.scannerClose} onPress={() => setShowScanner(false)}>
+              <MaterialCommunityIcons name="close" size={28} color="#fff" />
+            </Pressable>
+            <Text style={styles.scannerTitle}>Scan Library QR</Text>
+          </View>
+
+          <View style={styles.viewfinderContainer}>
+            <View style={styles.viewfinder}>
+              <View style={[styles.scannerCorner, styles.cTopLeft]} />
+              <View style={[styles.scannerCorner, styles.cTopRight]} />
+              <View style={[styles.scannerCorner, styles.cBottomLeft]} />
+              <View style={[styles.scannerCorner, styles.cBottomRight]} />
+              
+              {/* Laser animation simulation */}
+              <View style={styles.laserLine} />
+            </View>
+          </View>
+
+          <View style={styles.scannerFooter}>
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 12 }} />
+            <Text style={styles.scannerTip}>Align Library Gate QR Code inside the box</Text>
+            <Text style={styles.scannerSubTip}>Scanning starts automatically...</Text>
+          </View>
+
+          {/* Trigger scan success after 2 seconds */}
+          {showScanner && (
+            <ScannerTrigger onScan={handleScanSuccess} />
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
+}
+
+// Helper wrapper to handle timer securely
+function ScannerTrigger({ onScan }: { onScan: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onScan();
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, []);
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -240,4 +320,21 @@ const styles = StyleSheet.create({
   lastRecordItem: { flex: 1, gap: 4 },
   lastRecordLabel: { fontSize: 11 },
   lastRecordVal: { fontSize: 14 },
+  
+  // Simulated Camera Scanner Styles
+  scannerContainer: { flex: 1, justifyContent: "space-between", paddingVertical: 40 },
+  scannerHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20 },
+  scannerClose: { padding: 8 },
+  scannerTitle: { color: "#fff", fontSize: 18, fontFamily: "Poppins_600SemiBold", marginLeft: 16 },
+  viewfinderContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  viewfinder: { width: 260, height: 260, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", position: "relative", justifyContent: "center", alignItems: "center" },
+  scannerCorner: { position: "absolute", width: 20, height: 20, borderColor: "#10B981", borderWidth: 3 },
+  cTopLeft: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0 },
+  cTopRight: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0 },
+  cBottomLeft: { bottom: -2, left: -2, borderRightWidth: 0, borderTopWidth: 0 },
+  cBottomRight: { bottom: -2, right: -2, borderLeftWidth: 0, borderTopWidth: 0 },
+  laserLine: { width: "94%", height: 3, backgroundColor: "#ef4444", position: "absolute", top: "50%" },
+  scannerFooter: { alignItems: "center", paddingHorizontal: 20 },
+  scannerTip: { color: "#fff", fontSize: 15, fontFamily: "Poppins_500Medium", textAlign: "center" },
+  scannerSubTip: { color: "#9CA3AF", fontSize: 12, fontFamily: "Poppins_400Regular", marginTop: 4, textAlign: "center" },
 });

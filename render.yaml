@@ -1,0 +1,30 @@
+# Render.com Deployment Configuration
+# GHH Library - Admin Dashboard + API Server
+
+services:
+  - type: web
+    name: ghh-library
+    runtime: node
+    region: singapore   # India के सबसे पास
+    plan: free
+    
+    # Build command - Admin dashboard + API server दोनों build होंगे
+    buildCommand: |
+      npm install -g pnpm &&
+      pnpm install --frozen-lockfile &&
+      cd artifacts/admin-dashboard && PORT=3000 BASE_PATH=/ pnpm run build &&
+      cd ../api-server && pnpm run build
+    
+    # Start command - API server चलाएगा (admin dashboard भी serve करेगा)
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: ADMIN_DIST_PATH
+        value: ./artifacts/admin-dashboard/dist/public
+
+    # Health check
+    healthCheckPath: /api/health

@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { libraries, wallet } = useData();
+  const { libraries, wallet, settings } = useData();
 
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -57,17 +57,19 @@ export default function HomeScreen() {
               {user?.name?.split(" ")[0]}
             </Text>
           </View>
-          <View style={styles.headerRight}>
-            <View style={[styles.creditBadge, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}>
-              <MaterialCommunityIcons name="wallet" size={14} color={colors.primary} />
-              <Text style={[styles.creditCount, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
-                {wallet.available}
-              </Text>
-              <Text style={[styles.creditLabel, { color: colors.primary, fontFamily: "Poppins_400Regular" }]}>
-                credits
-              </Text>
+          {settings.showQuickStats && (
+            <View style={styles.headerRight}>
+              <View style={[styles.creditBadge, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}>
+                <MaterialCommunityIcons name="wallet" size={14} color={colors.primary} />
+                <Text style={[styles.creditCount, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
+                  {wallet.available}
+                </Text>
+                <Text style={[styles.creditLabel, { color: colors.primary, fontFamily: "Poppins_400Regular" }]}>
+                  credits
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -109,28 +111,30 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
-          {FILTERS.map(f => (
-            <Pressable
-              key={f}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: activeFilter === f ? colors.primary + "20" : "transparent",
-                  borderColor: activeFilter === f ? colors.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(f)}
-            >
-              <Text style={[styles.filterText, {
-                color: activeFilter === f ? colors.primary : colors.mutedForeground,
-                fontFamily: "Poppins_500Medium",
-              }]}>
-                {f}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        {settings.showFacilities && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
+            {FILTERS.map(f => (
+              <Pressable
+                key={f}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: activeFilter === f ? colors.primary + "20" : "transparent",
+                    borderColor: activeFilter === f ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setActiveFilter(f)}
+              >
+                <Text style={[styles.filterText, {
+                  color: activeFilter === f ? colors.primary : colors.mutedForeground,
+                  fontFamily: "Poppins_500Medium",
+                }]}>
+                  {f}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <FlatList

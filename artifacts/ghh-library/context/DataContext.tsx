@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 export interface Library {
   id: string;
@@ -267,6 +268,28 @@ const STUDENT_RECORDS: StudentRecord[] = [
   { id: "st6", name: "Pooja Singh", email: "pooja@email.com", phone: "+91 85544 66778", seat: "B-11", shift: "Morning", creditsRemaining: 18, planExpiry: "2025-07-01", attendance: 82, status: "active", joinDate: "2025-01-28" },
 ];
 
+export interface AppSettings {
+  appTitle: string;
+  welcomeMessage: string;
+  welcomeSubheading: string;
+  themeColor: string;
+  isBookSeatClickable: boolean;
+  isMarkAttendanceClickable: boolean;
+  isApplyLeaveClickable: boolean;
+  isPurchasePlanClickable: boolean;
+  showAchievements: boolean;
+  showQuickStats: boolean;
+  showFacilities: boolean;
+  showPopup: boolean;
+  popupScreen: "any" | "home" | "library" | "qr" | "leave";
+  popupTitle: string;
+  popupMessage: string;
+  popupMediaUrl: string;
+  popupPromptPlaceholder: string;
+  popupPrimaryButtonText: string;
+  popupSecondaryButtonText: string;
+}
+
 interface DataContextValue {
   libraries: Library[];
   getLibrary: (id: string) => Library | undefined;
@@ -277,8 +300,12 @@ interface DataContextValue {
   streak: number;
   leaves: Leave[];
   students: StudentRecord[];
+  settings: AppSettings;
   addLeave: (date: string) => void;
   cancelLeave: (id: string) => void;
+  buyPlan: (credits: number, planName: string) => void;
+  claimReward: (rewardId: string, credits: number) => void;
+  addAttendanceRecord: (isEntry: boolean) => void;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -292,11 +319,64 @@ const DEFAULT_WALLET: CreditWallet = {
   totalPurchased: 53,
 };
 
+const DEFAULT_SETTINGS: AppSettings = {
+  appTitle: "GHH Central Library",
+  welcomeMessage: "Find Your Perfect Study Space",
+  welcomeSubheading: "Book seats, track attendance, and achieve your academic goals.",
+  themeColor: "#0079F2",
+  isBookSeatClickable: true,
+  isMarkAttendanceClickable: true,
+  isApplyLeaveClickable: true,
+  isPurchasePlanClickable: true,
+  showAchievements: true,
+  showQuickStats: true,
+  showFacilities: true,
+  showPopup: false,
+  popupScreen: "any",
+  popupTitle: "Important Notice",
+  popupMessage: "We are introducing new facilities soon!",
+  popupMediaUrl: "",
+  popupPromptPlaceholder: "",
+  popupPrimaryButtonText: "Okay",
+  popupSecondaryButtonText: "Dismiss"
+};
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [leaves, setLeaves] = useState<Leave[]>([
     { id: "l1", date: "2025-06-01", status: "approved", creditSaved: true },
     { id: "l2", date: "2025-05-25", status: "approved", creditSaved: true },
   ]);
+
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [wallet, setWallet] = useState<CreditWallet>(DEFAULT_WALLET);
+  const [achievements, setAchievements] = useState<Achievement[]>([
+    { id: "ach1", title: "First Step", description: "First day of attendance", iconName: "star", unlocked: true, progress: 1, target: 1, reward: "+2 Credits" },
+    { id: "ach2", title: "Week Warrior", description: "7 day attendance streak", iconName: "fire", unlocked: true, progress: 7, target: 7, reward: "+5 Credits" },
+    { id: "ach3", title: "Fortnight Focus", description: "15 day attendance streak", iconName: "trophy", unlocked: true, progress: 15, target: 15, reward: "+10 Credits" },
+    { id: "ach4", title: "Month Master", description: "30 day attendance streak", iconName: "medal", unlocked: false, progress: 17, target: 30, reward: "+20 Credits" },
+    { id: "ach5", title: "Century Club", description: "100 total attendance days", iconName: "ribbon", unlocked: false, progress: 23, target: 100, reward: "+30 Credits" },
+    { id: "ach6", title: "Early Bird", description: "Arrive before 6:30 AM for 7 days", iconName: "weather-sunny", unlocked: false, progress: 5, target: 7, reward: "10% Discount" },
+  ]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const url = Platform.OS === "web" 
+          ? "/api/admin/settings" 
+          : "http://192.168.0.100:5000/api/admin/settings";
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        }
+      } catch (err) {
+        console.log("Using local settings fallback:", err);
+      }
+    };
+    fetchSettings();
+    const interval = setInterval(fetchSettings, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const addLeave = useCallback((date: string) => {
     const newLeave: Leave = {
@@ -312,19 +392,83 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setLeaves(prev => prev.filter(l => l.id !== id));
   }, []);
 
+  const buyPlan = useCallback((credits: number, planName: string) => {
+    setWallet(prev => ({
+      ...prev,
+      available: prev.available + credits,
+      totalPurchased: prev.totalPurchased + credits,
+      planName: planName,
+    }));
+  }, []);
+
+  const claimReward = useCallback((rewardId: string, credits: number) => {
+    setAchievements(prev => prev.map(ach => {
+      if (ach.id === rewardId) {
+        return { ...ach, claimed: true };
+      }
+      return ach;
+    }));
+    setWallet(prev => ({
+      ...prev,
+      available: prev.available + credits,
+    }));
+  }, []);
+
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(ATTENDANCE_RECORDS);
+
+  const addAttendanceRecord = useCallback((isEntry: boolean) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    if (isEntry) {
+      const newRec: AttendanceRecord = {
+        id: `a_${Date.now()}`,
+        date: todayStr,
+        dayOfWeek: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()],
+        entryTime: timeStr,
+        exitTime: "--",
+        duration: "Active Session",
+        creditDeducted: false
+      };
+      setAttendanceRecords(prev => [newRec, ...prev]);
+    } else {
+      setAttendanceRecords(prev => {
+        const copy = [...prev];
+        if (copy.length > 0 && copy[0].exitTime === "--") {
+          copy[0] = {
+            ...copy[0],
+            exitTime: timeStr,
+            duration: "5h 30m",
+            creditDeducted: true
+          };
+          setWallet(w => ({
+            ...w,
+            available: Math.max(0, w.available - 1),
+            consumed: w.consumed + 1
+          }));
+        }
+        return copy;
+      });
+    }
+  }, []);
+
   return (
     <DataContext.Provider value={{
       libraries: LIBRARIES,
       getLibrary: (id) => LIBRARIES.find(l => l.id === id),
       seats: SEATS,
-      attendanceRecords: ATTENDANCE_RECORDS,
-      wallet: DEFAULT_WALLET,
-      achievements: ACHIEVEMENTS,
+      attendanceRecords,
+      wallet,
+      achievements,
       streak: 17,
       leaves,
       students: STUDENT_RECORDS,
+      settings,
       addLeave,
       cancelLeave,
+      buyPlan,
+      claimReward,
+      addAttendanceRecord,
     }}>
       {children}
     </DataContext.Provider>

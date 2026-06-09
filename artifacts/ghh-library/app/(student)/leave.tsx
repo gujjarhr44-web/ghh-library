@@ -29,12 +29,16 @@ const DATES = Array.from({ length: 7 }, (_, i) => {
 export default function LeaveScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { leaves, addLeave, cancelLeave } = useData();
+  const { leaves, addLeave, cancelLeave, settings } = useData();
   const [selected, setSelected] = useState<string | null>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom + 24;
 
   const handleMarkLeave = () => {
+    if (!settings.isApplyLeaveClickable) {
+      Alert.alert("Feature Disabled", "Leave application is disabled by the admin.");
+      return;
+    }
     if (!selected) { Alert.alert("Select a date", "Please select a date for the leave."); return; }
     Alert.alert(
       "Confirm Leave",
@@ -72,7 +76,7 @@ export default function LeaveScreen() {
       <View style={[styles.infoBox, { marginHorizontal: 20, marginTop: 16, backgroundColor: colors.muted, borderColor: colors.border }]}>
         <MaterialCommunityIcons name="information-outline" size={16} color={colors.info} />
         <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          Mark leave before the cutoff time. Credits are only saved when leave is marked in advance. Your leave must be marked before 11:00 PM the previous night.
+          {!settings.isApplyLeaveClickable ? "Leave application has been disabled by the admin." : "Mark leave before the cutoff time. Credits are only saved when leave is marked in advance. Your leave must be marked before 11:00 PM the previous night."}
         </Text>
       </View>
 
@@ -95,11 +99,11 @@ export default function LeaveScreen() {
                   {
                     backgroundColor: isSelected ? colors.primary : alreadyMarked ? colors.muted : colors.card,
                     borderColor: isSelected ? colors.primary : colors.border,
-                    opacity: alreadyMarked ? 0.6 : 1,
+                    opacity: alreadyMarked || !settings.isApplyLeaveClickable ? 0.6 : 1,
                   },
                 ]}
-                onPress={() => !alreadyMarked && setSelected(d.date)}
-                disabled={alreadyMarked}
+                onPress={() => !alreadyMarked && settings.isApplyLeaveClickable && setSelected(d.date)}
+                disabled={alreadyMarked || !settings.isApplyLeaveClickable}
               >
                 <Text style={[styles.dateDay, { color: isSelected ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
                   {d.label}
@@ -119,14 +123,19 @@ export default function LeaveScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.markBtn,
-          { marginHorizontal: 20, marginTop: 20, backgroundColor: selected ? colors.primary : colors.muted, opacity: pressed ? 0.85 : 1 },
+          { 
+            marginHorizontal: 20, 
+            marginTop: 20, 
+            backgroundColor: !settings.isApplyLeaveClickable ? colors.border : selected ? colors.primary : colors.muted, 
+            opacity: pressed && settings.isApplyLeaveClickable ? 0.85 : 1 
+          },
         ]}
         onPress={handleMarkLeave}
-        disabled={!selected}
+        disabled={!selected || !settings.isApplyLeaveClickable}
       >
-        <MaterialCommunityIcons name="calendar-check" size={20} color={selected ? "#fff" : colors.mutedForeground} />
-        <Text style={[styles.markBtnText, { color: selected ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
-          Mark Leave & Save Credit
+        <MaterialCommunityIcons name="calendar-check" size={20} color={selected && settings.isApplyLeaveClickable ? "#fff" : colors.mutedForeground} />
+        <Text style={[styles.markBtnText, { color: selected && settings.isApplyLeaveClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+          {!settings.isApplyLeaveClickable ? "Leave Application Disabled" : "Mark Leave & Save Credit"}
         </Text>
       </Pressable>
 

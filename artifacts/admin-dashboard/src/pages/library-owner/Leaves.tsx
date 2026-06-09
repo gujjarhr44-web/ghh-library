@@ -1,4 +1,5 @@
 import { useGetOwnerLeaves, useApproveLeave, useRejectLeave } from "@workspace/api-client-react";
+import { useButtonEnabled } from "@/lib/settings-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,10 @@ export default function LibraryOwnerLeaves() {
   const rejectLeave = useRejectLeave();
   
   const loading = isLoading || isFetching;
+
+  // CMS button controls
+  const canApprove = useButtonEnabled("btn.approve_leave");
+  const canReject = useButtonEnabled("btn.reject_leave");
 
   const handleApprove = (id: string) => {
     approveLeave.mutate(
@@ -119,24 +124,28 @@ export default function LibraryOwnerLeaves() {
                       <TableCell className="text-right">
                         {leave.status === 'pending' ? (
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-900 dark:text-green-400 dark:hover:bg-green-900/50"
-                              onClick={() => handleApprove(leave.id)}
-                              disabled={approveLeave.isPending || rejectLeave.isPending}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/50"
-                              onClick={() => handleReject(leave.id)}
-                              disabled={approveLeave.isPending || rejectLeave.isPending}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" /> Reject
-                            </Button>
+                            {canApprove && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-900 dark:text-green-400 dark:hover:bg-green-900/50"
+                                onClick={() => handleApprove(leave.id)}
+                                disabled={approveLeave.isPending || rejectLeave.isPending}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
+                              </Button>
+                            )}
+                            {canReject && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/50"
+                                onClick={() => handleReject(leave.id)}
+                                disabled={approveLeave.isPending || rejectLeave.isPending}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" /> Reject
+                              </Button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>

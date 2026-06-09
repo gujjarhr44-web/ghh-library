@@ -7,33 +7,39 @@ import {
   StyleSheet,
   Text,
   View,
+  Pressable,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
 
-function AchievementCard({ ach }: { ach: ReturnType<typeof useData>["achievements"][0] }) {
+function AchievementCard({ ach, onClaim }: { ach: ReturnType<typeof useData>["achievements"][0]; onClaim: () => void }) {
   const colors = useColors();
   const pct = Math.min(100, Math.round((ach.progress / ach.target) * 100));
 
   return (
-    <View style={[
-      styles.achCard,
-      {
-        backgroundColor: ach.unlocked ? colors.primary + "15" : colors.card,
-        borderColor: ach.unlocked ? colors.primary + "60" : colors.border,
-        opacity: ach.unlocked ? 1 : 0.7,
-      },
-    ]}>
+    <Pressable
+      disabled={!ach.unlocked || ach.claimed}
+      onPress={onClaim}
+      style={[
+        styles.achCard,
+        {
+          backgroundColor: ach.claimed ? colors.success + "15" : ach.unlocked ? colors.primary + "15" : colors.card,
+          borderColor: ach.claimed ? colors.success + "60" : ach.unlocked ? colors.primary + "60" : colors.border,
+          opacity: ach.unlocked ? 1 : 0.7,
+        },
+      ]}
+    >
       <View style={[styles.achIcon, {
-        backgroundColor: ach.unlocked ? colors.primary + "25" : colors.muted,
+        backgroundColor: ach.claimed ? colors.success + "25" : ach.unlocked ? colors.primary + "25" : colors.muted,
       }]}>
         <MaterialCommunityIcons
           name={ach.iconName as any}
           size={26}
-          color={ach.unlocked ? colors.primary : colors.mutedForeground}
+          color={ach.claimed ? colors.success : ach.unlocked ? colors.primary : colors.mutedForeground}
         />
-        {ach.unlocked && (
+        {(ach.unlocked || ach.claimed) && (
           <View style={[styles.unlockedBadge, { backgroundColor: colors.success }]}>
             <MaterialCommunityIcons name="check" size={10} color="#fff" />
           </View>
@@ -56,27 +62,69 @@ function AchievementCard({ ach }: { ach: ReturnType<typeof useData>["achievement
             </Text>
           </View>
         )}
+        {ach.unlocked && !ach.claimed && (
+          <Text style={{ fontSize: 11, color: colors.primary, fontFamily: "Poppins_600SemiBold", marginTop: 2 }}>
+            Tap to claim reward!
+          </Text>
+        )}
       </View>
-      <View style={[styles.achReward, { backgroundColor: ach.unlocked ? colors.primary : colors.muted }]}>
+      <View style={[styles.achReward, { backgroundColor: ach.claimed ? colors.success : ach.unlocked ? colors.primary : colors.muted }]}>
         <Text style={[styles.achRewardText, {
-          color: ach.unlocked ? "#fff" : colors.mutedForeground,
+          color: ach.claimed || ach.unlocked ? "#fff" : colors.mutedForeground,
           fontFamily: "Poppins_600SemiBold",
         }]}>
-          {ach.reward}
+          {ach.claimed ? "Claimed" : ach.reward}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { achievements, streak, wallet } = useData();
+  const { achievements, streak, wallet, claimReward, buyPlan } = useData();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
   const unlocked = achievements.filter(a => a.unlocked).length;
   const attendancePct = Math.round((wallet.consumed / (wallet.consumed + wallet.available)) * 100);
+
+  const handleClaim = (achId: string, rewardStr: string) => {
+    const num = parseInt(rewardStr.replace(/[^0-9]/g, ""), 10) || 0;
+    claimReward(achId, num);
+    Alert.alert("Reward Claimed!", `${num} credits added to your wallet!`);
+  };
+
+  const handleReferralPress = () => {
+    Alert.alert(
+      "Referral Copied!",
+      "Referral Code 'ARJUN2024' has been copied to clipboard. Share with your friends!",
+      [
+        {
+          text: "Enter a Friend's Code",
+          onPress: () => {
+            Alert.prompt(
+              "Apply Referral Code",
+              "Enter your friend's referral code to receive 5 bonus credits immediately:",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Apply",
+                  onPress: (code) => {
+                    if (code && code.trim().length > 0) {
+                      buyPlan(5, "Referral Bonus");
+                      Alert.alert("Referral Applied!", "5 credits pack added as referral reward!");
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        },
+        { text: "OK" }
+      ]
+    );
+  };
 
   return (
     <ScrollView
@@ -178,11 +226,14 @@ export default function RewardsScreen() {
       </View>
       <View style={{ paddingHorizontal: 20, marginTop: 12, gap: 10 }}>
         {achievements.map(ach => (
-          <AchievementCard key={ach.id} ach={ach} />
+          <AchievementCard key={ach.id} ach={ach} onClaim={() => handleClaim(ach.id, ach.reward)} />
         ))}
       </View>
 
-      <View style={[styles.referralCard, { marginHorizontal: 20, marginTop: 20, backgroundColor: colors.secondary, borderColor: colors.border }]}>
+      <Pressable
+        onPress={handleReferralPress}
+        style={[styles.referralCard, { marginHorizontal: 20, marginTop: 20, backgroundColor: colors.secondary, borderColor: colors.border }]}
+      >
         <View style={styles.referralLeft}>
           <MaterialCommunityIcons name="account-multiple-plus" size={28} color={colors.info} />
           <View>
@@ -196,10 +247,10 @@ export default function RewardsScreen() {
         </View>
         <View style={[styles.referralCode, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.referralCodeText, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
-            ARJUN24
+            ARJUN2024
           </Text>
         </View>
-      </View>
+      </Pressable>
     </ScrollView>
   );
 }

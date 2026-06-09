@@ -191,4 +191,41 @@ router.post("/notifications", (req, res) => {
   res.status(201).json(notif);
 });
 
+import { getLegacySettings, updateSetting, bulkUpdateSettings } from "../lib/cms-store";
+
+router.get("/settings", (_req, res) => {
+  res.json(getLegacySettings());
+});
+
+router.post("/settings", (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const keyMap: Record<string, string> = {
+    appTitle: "app.title",
+    welcomeMessage: "owner.welcome_message",
+    welcomeSubheading: "owner.welcome_subheading",
+    themeColor: "theme.primary_color",
+    isBookSeatClickable: "btn.book_seat",
+    isMarkAttendanceClickable: "btn.mark_attendance",
+    isApplyLeaveClickable: "btn.apply_leave",
+    isPurchasePlanClickable: "btn.purchase_plan",
+    showAchievements: "feature.achievements",
+    showQuickStats: "feature.quick_stats",
+    showFacilities: "feature.facilities",
+    showPopup: "popup.global.enabled",
+    popupScreen: "popup.global.target",
+    popupTitle: "popup.global.title",
+    popupMessage: "popup.global.message",
+    popupMediaUrl: "popup.global.image_url",
+    popupPrimaryButtonText: "popup.global.button_text",
+    popupSecondaryButtonText: "popup.global.dismiss_text",
+  };
+  const updates: Record<string, string> = {};
+  for (const [k, v] of Object.entries(body)) {
+    const cmsKey = keyMap[k];
+    if (cmsKey) updates[cmsKey] = String(v);
+  }
+  bulkUpdateSettings(updates);
+  res.json(getLegacySettings());
+});
+
 export default router;

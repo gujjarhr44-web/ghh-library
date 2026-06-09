@@ -24,7 +24,7 @@ const PLANS = [
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, attendanceRecords, leaves } = useData();
+  const { wallet, attendanceRecords, leaves, buyPlan } = useData();
   const [tab, setTab] = useState<"history" | "plans">("history");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -244,6 +244,10 @@ export default function WalletScreen() {
                   styles.buyBtn,
                   { backgroundColor: plan.popular ? colors.primary : colors.secondary, opacity: pressed ? 0.8 : 1 },
                 ]}
+                onPress={() => {
+                  buyPlan(plan.credits, `${plan.credits} Credits Pack`);
+                  alert(`Successfully purchased ${plan.credits} Credits!`);
+                }}
               >
                 <Text style={[styles.buyBtnText, {
                   color: plan.popular ? "#fff" : colors.foreground,

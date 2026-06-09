@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetOwnerSeats, useUpdateOwnerSeat } from "@workspace/api-client-react";
+import { useButtonEnabled } from "@/lib/settings-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,9 @@ export default function LibraryOwnerSeats() {
   const updateSeat = useUpdateOwnerSeat();
   
   const loading = isLoading || isFetching;
+
+  // CMS control
+  const canUpdateSeat = useButtonEnabled("btn.update_seat");
 
   const handleStatusChange = (id: string, newStatus: SeatUpdateStatus) => {
     updateSeat.mutate(
@@ -123,6 +127,7 @@ export default function LibraryOwnerSeats() {
                           <Select 
                             defaultValue={seat.status} 
                             onValueChange={(v) => handleStatusChange(seat.id, v as SeatUpdateStatus)}
+                            disabled={!canUpdateSeat}
                           >
                             <SelectTrigger>
                               <SelectValue />

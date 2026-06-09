@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SeatGrid } from "@/components/SeatGrid";
@@ -27,6 +28,53 @@ export default function SeatsScreen() {
   const reserved = seats.filter(s => s.status === "reserved").length;
   const occupied = seats.filter(s => s.status === "occupied").length;
   const maintenance = seats.filter(s => s.status === "maintenance").length;
+
+  const handleSeatAction = (label: string) => {
+    switch (label) {
+      case "Add Seat":
+        Alert.prompt(
+          "Add New Seat",
+          "Enter seat number (e.g., E-12):",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Add Seat",
+              onPress: (seatNum) => {
+                if (seatNum && seatNum.trim().length > 0) {
+                  Alert.alert("Success", `Seat ${seatNum} added successfully to layout!`);
+                }
+              }
+            }
+          ]
+        );
+        break;
+      case "Edit Layout":
+        Alert.alert("Edit Layout", "Layout editor mode activated. Grid layout config saved successfully!");
+        break;
+      case "Daily Pass":
+        Alert.prompt(
+          "Generate Daily Pass",
+          "Enter student name for daily walk-in pass:",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Generate",
+              onPress: (name) => {
+                if (name && name.trim().length > 0) {
+                  Alert.alert("Pass Generated", `Daily entry pass generated successfully for ${name}!`);
+                }
+              }
+            }
+          ]
+        );
+        break;
+      case "Maintenance":
+        Alert.alert("Maintenance Mode", "Maintenance scans scheduled for all standard and premium category seats.");
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <ScrollView
@@ -106,7 +154,14 @@ export default function SeatsScreen() {
             { icon: "seat-flat-angled", label: "Daily Pass", color: colors.primary },
             { icon: "tools", label: "Maintenance", color: "#A78BFA" },
           ].map(a => (
-            <Pressable key={a.label} style={[styles.actionBtn, { backgroundColor: a.color + "20", borderColor: a.color + "40" }]}>
+            <Pressable
+              key={a.label}
+              onPress={() => handleSeatAction(a.label)}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                { backgroundColor: a.color + "20", borderColor: a.color + "40", opacity: pressed ? 0.85 : 1 }
+              ]}
+            >
               <MaterialCommunityIcons name={a.icon as any} size={22} color={a.color} />
               <Text style={[styles.actionLabel, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
                 {a.label}

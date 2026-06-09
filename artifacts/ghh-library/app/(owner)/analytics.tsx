@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
@@ -17,8 +18,8 @@ const CHART_WIDTH = width - 80;
 
 const WEEKLY = [28, 34, 30, 38, 42, 35, 40];
 const MONTHLY = [140, 160, 155, 170, 185, 178, 192, 205, 198, 188, 210, 220];
-const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function BarChart({ data, labels, color }: { data: number[]; labels: string[]; color: string }) {
   const colors = useColors();
@@ -27,7 +28,13 @@ function BarChart({ data, labels, color }: { data: number[]; labels: string[]; c
     <View style={styles.chartWrap}>
       <View style={styles.bars}>
         {data.map((val, i) => (
-          <View key={i} style={styles.barItem}>
+          <Pressable
+            key={i}
+            onPress={() => {
+              Alert.alert("Attendance Detail", `${labels[i]} attendance:\n${val} students logged present.`);
+            }}
+            style={styles.barItem}
+          >
             <View style={[styles.barFill, {
               height: (val / max) * 100,
               backgroundColor: i === data.length - 1 ? color : color + "80",
@@ -36,7 +43,7 @@ function BarChart({ data, labels, color }: { data: number[]; labels: string[]; c
             <Text style={[styles.barLabel, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
               {labels[i]}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
     </View>
@@ -75,7 +82,13 @@ export default function AnalyticsScreen() {
           { label: "Avg Daily", value: `${avg}`, icon: "account-clock", color: colors.info, change: "+8%" },
           { label: "Occupancy", value: "77%", icon: "seat", color: colors.success, change: "+5%" },
         ].map(s => (
-          <View key={s.label} style={[styles.summaryBox, { backgroundColor: s.color + "15", borderColor: s.color + "40", flex: 1 }]}>
+          <Pressable
+            key={s.label}
+            onPress={() => {
+              Alert.alert(s.label, `${s.label} value is currently ${s.value} with a positive growth of ${s.change}.`);
+            }}
+            style={[styles.summaryBox, { backgroundColor: s.color + "15", borderColor: s.color + "40", flex: 1 }]}
+          >
             <MaterialCommunityIcons name={s.icon as any} size={18} color={s.color} />
             <Text style={[styles.summaryVal, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
               {s.value}
@@ -86,7 +99,7 @@ export default function AnalyticsScreen() {
             <Text style={[styles.summaryChange, { color: colors.success, fontFamily: "Poppins_600SemiBold" }]}>
               {s.change}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -155,7 +168,13 @@ export default function AnalyticsScreen() {
           { shift: "Evening (6PM-11PM)", pct: 48, students: 19 },
           { shift: "Full Day", pct: 78, students: 12 },
         ].map(s => (
-          <View key={s.shift} style={styles.shiftRow}>
+          <Pressable
+            key={s.shift}
+            onPress={() => {
+              Alert.alert("Shift occupancy details", `${s.shift}:\nOccupancy: ${s.pct}%\nTotal Enrolled: ${s.students} active students`);
+            }}
+            style={({ pressed }) => [styles.shiftRow, { opacity: pressed ? 0.85 : 1 }]}
+          >
             <View style={styles.shiftInfo}>
               <Text style={[styles.shiftName, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
                 {s.shift}
@@ -172,7 +191,7 @@ export default function AnalyticsScreen() {
                 {s.pct}%
               </Text>
             </View>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -186,7 +205,13 @@ export default function AnalyticsScreen() {
           { plan: "15 Credits Plan", revenue: 18000, count: 30, color: colors.success },
           { plan: "Daily Pass", revenue: 8000, count: 40, color: "#A78BFA" },
         ].map(r => (
-          <View key={r.plan} style={styles.revenueRow}>
+          <Pressable
+            key={r.plan}
+            onPress={() => {
+              Alert.alert("Plan Revenue", `${r.plan}:\nTotal Sales: ${r.count} plans sold\nTotal Revenue: ₹${r.revenue.toLocaleString("en-IN")}`);
+            }}
+            style={({ pressed }) => [styles.revenueRow, { opacity: pressed ? 0.85 : 1 }]}
+          >
             <View style={[styles.revDot, { backgroundColor: r.color }]} />
             <Text style={[styles.revPlan, { color: colors.foreground, fontFamily: "Poppins_500Medium", flex: 1 }]}>
               {r.plan}
@@ -197,7 +222,7 @@ export default function AnalyticsScreen() {
             <Text style={[styles.revAmount, { color: r.color, fontFamily: "Poppins_700Bold" }]}>
               ₹{(r.revenue / 1000).toFixed(0)}K
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
     </ScrollView>

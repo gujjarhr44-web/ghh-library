@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetAdminNotifications, useSendAdminNotification } from "@workspace/api-client-react";
+import { useButtonEnabled } from "@/lib/settings-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,9 @@ export default function SuperAdminNotifications() {
   const sendNotification = useSendAdminNotification();
   
   const loading = isLoading || isFetching;
+
+  // CMS control
+  const canSend = useButtonEnabled("btn.send_notification");
 
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -123,8 +127,8 @@ export default function SuperAdminNotifications() {
               />
             </div>
 
-            <Button type="submit" disabled={sendNotification.isPending} className="w-full sm:w-auto">
-              {sendNotification.isPending ? "Sending..." : "Send Broadcast"}
+            <Button type="submit" disabled={!canSend || sendNotification.isPending} className="w-full sm:w-auto">
+              {!canSend ? "Send Disabled" : sendNotification.isPending ? "Sending..." : "Send Broadcast"}
             </Button>
           </form>
         </CardContent>

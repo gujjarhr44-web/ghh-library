@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AppSettingsProvider } from "@/lib/settings-context";
+import { GlobalPopupOverlay, AnnouncementBanner } from "@/components/GlobalOverlays";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 
@@ -13,6 +15,8 @@ import SuperAdminStudents from "@/pages/super-admin/Students";
 import SuperAdminPayments from "@/pages/super-admin/Payments";
 import SuperAdminAttendance from "@/pages/super-admin/Attendance";
 import SuperAdminNotifications from "@/pages/super-admin/Notifications";
+import SuperAdminSettings from "@/pages/super-admin/Settings";
+import ControlPanel from "@/pages/super-admin/ControlPanel";
 
 import LibraryOwnerLayout from "@/layouts/LibraryOwnerLayout";
 import LibraryOwnerDashboard from "@/pages/library-owner/Dashboard";
@@ -35,34 +39,78 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
-      
+
       {/* Super Admin Routes */}
-      <Route path="/super-admin*">
+      <Route path="/super-admin">
         <SuperAdminLayout>
-          <Switch>
-            <Route path="/super-admin" component={SuperAdminDashboard} />
-            <Route path="/super-admin/libraries" component={SuperAdminLibraries} />
-            <Route path="/super-admin/students" component={SuperAdminStudents} />
-            <Route path="/super-admin/payments" component={SuperAdminPayments} />
-            <Route path="/super-admin/attendance" component={SuperAdminAttendance} />
-            <Route path="/super-admin/notifications" component={SuperAdminNotifications} />
-            <Route component={NotFound} />
-          </Switch>
+          <SuperAdminDashboard />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/libraries">
+        <SuperAdminLayout>
+          <SuperAdminLibraries />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/students">
+        <SuperAdminLayout>
+          <SuperAdminStudents />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/payments">
+        <SuperAdminLayout>
+          <SuperAdminPayments />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/attendance">
+        <SuperAdminLayout>
+          <SuperAdminAttendance />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/notifications">
+        <SuperAdminLayout>
+          <SuperAdminNotifications />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/settings">
+        <SuperAdminLayout>
+          <SuperAdminSettings />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/control-panel">
+        <SuperAdminLayout>
+          <ControlPanel />
         </SuperAdminLayout>
       </Route>
 
       {/* Library Owner Routes */}
-      <Route path="/library-owner*">
+      <Route path="/library-owner">
         <LibraryOwnerLayout>
-          <Switch>
-            <Route path="/library-owner" component={LibraryOwnerDashboard} />
-            <Route path="/library-owner/seats" component={LibraryOwnerSeats} />
-            <Route path="/library-owner/students" component={LibraryOwnerStudents} />
-            <Route path="/library-owner/attendance" component={LibraryOwnerAttendance} />
-            <Route path="/library-owner/leaves" component={LibraryOwnerLeaves} />
-            <Route path="/library-owner/shifts" component={LibraryOwnerShifts} />
-            <Route component={NotFound} />
-          </Switch>
+          <LibraryOwnerDashboard />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/seats">
+        <LibraryOwnerLayout>
+          <LibraryOwnerSeats />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/students">
+        <LibraryOwnerLayout>
+          <LibraryOwnerStudents />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/attendance">
+        <LibraryOwnerLayout>
+          <LibraryOwnerAttendance />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/leaves">
+        <LibraryOwnerLayout>
+          <LibraryOwnerLeaves />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/shifts">
+        <LibraryOwnerLayout>
+          <LibraryOwnerShifts />
         </LibraryOwnerLayout>
       </Route>
 
@@ -76,9 +124,15 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
+          <AppSettingsProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              {/* Global announcement banner — top of all pages */}
+              <AnnouncementBanner />
+              <Router />
+              {/* Global popup overlay — shown on all pages when enabled */}
+              <GlobalPopupOverlay />
+            </WouterRouter>
+          </AppSettingsProvider>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

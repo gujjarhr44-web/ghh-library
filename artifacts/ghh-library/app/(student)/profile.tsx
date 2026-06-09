@@ -40,6 +40,31 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleMenuPress = (label: string) => {
+    switch (label) {
+      case "My Library":
+        Alert.alert("My Library", "Library Name: GHH Central Library\nAddress: 12, FC Road, Pune\nOwner: Priya Patel\nContact: +91 98765 43210");
+        break;
+      case "My Seat":
+        Alert.alert("My Seat", `Assigned Seat: ${user?.assignedSeat || "A-12"}\nShift: Morning Shift (06:00 AM - 12:00 PM)`);
+        break;
+      case "Leave History":
+        router.push("/(student)/leave" as any);
+        break;
+      case "Notifications":
+        Alert.alert("Notifications", "You have no unread notifications.");
+        break;
+      case "Help & Support":
+        Alert.alert("Help & Support", "For support, email us at:\nsupport@ghhlibrary.com\nPhone: +91 98765 43210");
+        break;
+      case "About GHH Library":
+        Alert.alert("About GHH Library", "GHH Library App\nVersion: 1.0.0\nDesigned for modern library desk & seat booking management.");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -67,7 +92,28 @@ export default function ProfileScreen() {
             {user?.phone}
           </Text>
         </View>
-        <Pressable style={[styles.editBtn, { backgroundColor: colors.muted }]}>
+        <Pressable 
+          style={[styles.editBtn, { backgroundColor: colors.muted }]}
+          onPress={() => {
+            Alert.prompt(
+              "Edit Profile Name",
+              "Update your name:",
+              [
+                { text: "Cancel", style: "cancel" },
+                { 
+                  text: "Save", 
+                  onPress: (newName) => {
+                    if (newName && newName.trim().length > 0) {
+                      Alert.alert("Success", "Profile updated successfully!");
+                    }
+                  } 
+                }
+              ],
+              "plain-text",
+              user?.name
+            );
+          }}
+        >
           <MaterialCommunityIcons name="pencil" size={16} color={colors.foreground} />
         </Pressable>
       </View>
@@ -114,6 +160,7 @@ export default function ProfileScreen() {
         {MENU_ITEMS.map((item, i) => (
           <Pressable
             key={item.label}
+            onPress={() => handleMenuPress(item.label)}
             style={({ pressed }) => [
               styles.menuItem,
               {

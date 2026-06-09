@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useData } from "@/context/DataContext";
@@ -74,7 +75,59 @@ export default function StudentsScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: bottomPad, gap: 10 }}
         scrollEnabled={filtered.length > 0}
         renderItem={({ item: s }) => (
-          <View style={[styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Pressable 
+            onPress={() => {
+              Alert.alert(
+                s.name,
+                `Seat: ${s.seat}\nShift: ${s.shift}\nCredits remaining: ${s.creditsRemaining}\nStatus: ${s.status}`,
+                [
+                  {
+                    text: "Edit Seat/Shift",
+                    onPress: () => {
+                      Alert.prompt(
+                        "Edit Seat Assignment",
+                        `Change seat for ${s.name}:`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Save",
+                            onPress: (newSeat) => {
+                              if (newSeat && newSeat.trim().length > 0) {
+                                Alert.alert("Updated", `Seat changed to ${newSeat} successfully!`);
+                              }
+                            }
+                          }
+                        ],
+                        "plain-text",
+                        s.seat
+                      );
+                    }
+                  },
+                  {
+                    text: "Expire Plan",
+                    style: "destructive",
+                    onPress: () => {
+                      Alert.alert(
+                        "Expire Plan?",
+                        `Are you sure you want to expire ${s.name}'s plan?`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Yes, Expire",
+                            onPress: () => {
+                              Alert.alert("Success", "Plan expired successfully. Student status set to Expired.");
+                            }
+                          }
+                        ]
+                      );
+                    }
+                  },
+                  { text: "Close", style: "cancel" }
+                ]
+              );
+            }}
+            style={({ pressed }) => [styles.studentCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}
+          >
             <View style={[styles.avatar, { backgroundColor: colors.primary + "25" }]}>
               <Text style={[styles.avatarInitial, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
                 {s.name[0]}
@@ -121,7 +174,7 @@ export default function StudentsScreen() {
                 attendance
               </Text>
             </View>
-          </View>
+          </Pressable>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>

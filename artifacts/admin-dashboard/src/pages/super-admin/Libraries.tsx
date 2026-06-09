@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetAdminLibraries, useUpdateAdminLibrary } from "@workspace/api-client-react";
+import { useButtonEnabled, useFeature } from "@/lib/settings-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,13 @@ export default function SuperAdminLibraries() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // CMS button controls
+  const canApprove = useButtonEnabled("btn.approve_library");
+  const canSuspend = useButtonEnabled("btn.suspend_library");
+  const canReject = useButtonEnabled("btn.reject_library");
+  const showExport = useFeature("feature.export_buttons", true);
+  const showSearch = useFeature("feature.search_bars", true);
 
   const { data: libraries, isLoading, isFetching, refetch } = useGetAdminLibraries();
   const updateLibrary = useUpdateAdminLibrary();
@@ -71,8 +79,8 @@ export default function SuperAdminLibraries() {
           <p className="text-muted-foreground mt-1">Manage all registered libraries.</p>
         </div>
         <div className="flex items-center gap-2">
-          {!loading && filteredLibraries.length > 0 && (
-            <CSVLink data={filteredLibraries} filename="libraries.csv">
+          {showExport && !loading && filteredLibraries.length > 0 && (
+            <CSVLink data={Array.isArray(filteredLibraries) ? filteredLibraries : []} filename="libraries.csv">
               <Button variant="outline" size="sm" className="h-9">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -94,13 +102,17 @@ export default function SuperAdminLibraries() {
               </TabsList>
             </Tabs>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search libraries..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-9"
-              />
+              {showSearch && (
+                <>
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search libraries..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 h-9"
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -157,9 +169,9 @@ export default function SuperAdminLibraries() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "approved")}>Approve</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "suspended")}>Suspend</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "rejected")}>Reject</DropdownMenuItem>
+                            {canApprove && <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "approved")}>Approve</DropdownMenuItem>}
+                            {canSuspend && <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "suspended")}>Suspend</DropdownMenuItem>}
+                            {canReject && <DropdownMenuItem onClick={() => handleStatusChange(lib.id, "rejected")}>Reject</DropdownMenuItem>}
                             <DropdownMenuItem>View Details</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

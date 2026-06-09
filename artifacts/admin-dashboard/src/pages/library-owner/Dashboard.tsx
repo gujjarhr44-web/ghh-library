@@ -128,7 +128,7 @@ export default function LibraryOwnerDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Weekly Attendance</CardTitle>
             {!loadingAtt && attendanceChart && attendanceChart.length > 0 && (
-              <CSVLink data={attendanceChart} filename="weekly-attendance.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(attendanceChart) ? attendanceChart : []} filename="weekly-attendance.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}
@@ -155,7 +155,7 @@ export default function LibraryOwnerDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base font-semibold">Seat Occupancy by Shift</CardTitle>
             {!loadingSeat && seatChart && seatChart.length > 0 && (
-              <CSVLink data={seatChart} filename="seat-occupancy.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              <CSVLink data={Array.isArray(seatChart) ? seatChart : []} filename="seat-occupancy.csv" className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 <Download className="w-4 h-4" />
               </CSVLink>
             )}

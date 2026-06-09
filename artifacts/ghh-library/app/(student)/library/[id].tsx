@@ -33,7 +33,7 @@ export default function LibraryDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getLibrary, seats } = useData();
+  const { getLibrary, seats, settings } = useData();
   const library = getLibrary(id ?? "");
 
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
@@ -55,6 +55,10 @@ export default function LibraryDetailScreen() {
   );
 
   const handleBookSeat = () => {
+    if (!settings.isBookSeatClickable) {
+      Alert.alert("Feature Disabled", "Seat reservation is disabled by the admin.");
+      return;
+    }
     if (!selectedSeat) { Alert.alert("Select a Seat", "Tap on an available seat to select it."); return; }
     if (!selectedShift) { Alert.alert("Select Shift", "Please select a time shift."); return; }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -136,21 +140,23 @@ export default function LibraryDetailScreen() {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginBottom: 10 }]}>
-            Facilities
-          </Text>
-          <View style={styles.facilityGrid}>
-            {library.facilities.map(f => (
-              <View key={f} style={[styles.facilityItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <MaterialCommunityIcons name={FACILITY_ICONS[f] as any ?? "check"} size={18} color={colors.primary} />
-                <Text style={[styles.facilityLabel, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
-                  {f}
-                </Text>
-              </View>
-            ))}
+        {settings.showFacilities && (
+          <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginBottom: 10 }]}>
+              Facilities
+            </Text>
+            <View style={styles.facilityGrid}>
+              {library.facilities.map(f => (
+                <View key={f} style={[styles.facilityItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons name={FACILITY_ICONS[f] as any ?? "check"} size={18} color={colors.primary} />
+                  <Text style={[styles.facilityLabel, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
+                    {f}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={[styles.tabToggle, { marginHorizontal: 20, marginTop: 20, backgroundColor: colors.muted }]}>
           {(["seats", "plans"] as const).map(t => (
@@ -229,13 +235,17 @@ export default function LibraryDetailScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.bookBtn,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                { 
+                  backgroundColor: !settings.isBookSeatClickable ? colors.border : colors.primary, 
+                  opacity: pressed && settings.isBookSeatClickable ? 0.85 : 1 
+                },
               ]}
               onPress={handleBookSeat}
+              disabled={!settings.isBookSeatClickable}
             >
-              <MaterialCommunityIcons name="check-circle" size={20} color="#fff" />
-              <Text style={[styles.bookBtnText, { fontFamily: "Poppins_600SemiBold" }]}>
-                Reserve Seat
+              <MaterialCommunityIcons name="check-circle" size={20} color={settings.isBookSeatClickable ? "#fff" : colors.mutedForeground} />
+              <Text style={[styles.bookBtnText, { color: settings.isBookSeatClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+                {!settings.isBookSeatClickable ? "Seat Booking Disabled" : "Reserve Seat"}
               </Text>
             </Pressable>
           </View>
@@ -282,13 +292,24 @@ export default function LibraryDetailScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.bookBtn,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1, marginTop: 4 },
+                { 
+                  backgroundColor: !settings.isPurchasePlanClickable ? colors.border : colors.primary, 
+                  opacity: pressed && settings.isPurchasePlanClickable ? 0.85 : 1, 
+                  marginTop: 4 
+                },
               ]}
-              onPress={() => Alert.alert("Payment", "Payment gateway integration coming soon!")}
+              onPress={() => {
+                if (!settings.isPurchasePlanClickable) {
+                  Alert.alert("Feature Disabled", "Purchasing plans is disabled by the admin.");
+                  return;
+                }
+                Alert.alert("Payment", "Payment gateway integration coming soon!");
+              }}
+              disabled={!settings.isPurchasePlanClickable}
             >
-              <MaterialCommunityIcons name="credit-card" size={20} color="#fff" />
-              <Text style={[styles.bookBtnText, { fontFamily: "Poppins_600SemiBold" }]}>
-                Buy Credits
+              <MaterialCommunityIcons name="credit-card" size={20} color={settings.isPurchasePlanClickable ? "#fff" : colors.mutedForeground} />
+              <Text style={[styles.bookBtnText, { color: settings.isPurchasePlanClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+                {!settings.isPurchasePlanClickable ? "Plan Purchase Disabled" : "Buy Credits"}
               </Text>
             </Pressable>
           </View>
