@@ -55,3 +55,10 @@ Thumbs.db
 .env.*.local
 *.env
 
+# APK files (large binary, use GitHub Releases instead)
+*.apk
+*.aab
+
+# Backup files
+*.backup
+node_modules_old/

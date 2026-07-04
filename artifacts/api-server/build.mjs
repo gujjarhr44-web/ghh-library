@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import { rm } from "node:fs/promises";
+import esbuildPluginPino from "esbuild-plugin-pino";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -21,6 +22,7 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
     alias: {
       "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src/index.ts"),
       "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/index.ts"),
@@ -32,6 +34,9 @@ async function buildAll() {
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
+      "has-flag",
+      "supports-color",
+      "ws",
       "sharp",
       "better-sqlite3",
       "sqlite3",

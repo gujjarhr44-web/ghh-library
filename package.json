@@ -4,6 +4,8 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run typecheck",
+    "replit:build": "pnpm --filter @workspace/admin-dashboard run build && pnpm --filter @workspace/api-server run build",
+    "replit:start": "ADMIN_DIST_PATH=./artifacts/admin-dashboard/dist/public node --enable-source-maps artifacts/api-server/dist/index.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs"
   },

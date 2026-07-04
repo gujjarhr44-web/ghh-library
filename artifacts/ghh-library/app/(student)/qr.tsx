@@ -24,12 +24,15 @@ export default function QRScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { wallet, attendanceRecords, settings, addAttendanceRecord } = useData();
+  const { wallet, attendanceRecords, settings, addAttendanceRecord, hasActiveSession } = useData();
   const [mode, setMode] = useState<ScanMode>("entry");
   const [scanned, setScanned] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  // FIX BUG-06: Check if there is an active (un-exited) entry session
+  const activeSession = hasActiveSession();
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
 
   const qrData = JSON.stringify({
@@ -46,6 +49,14 @@ export default function QRScreen() {
   const handleMarkAttendance = () => {
     if (!settings.isMarkAttendanceClickable) {
       Alert.alert("Feature Disabled", "Attendance marking has been disabled by the admin.");
+      return;
+    }
+    // FIX BUG-06: Prevent exit scan if no active entry session
+    if (mode === "exit" && !activeSession) {
+      Alert.alert(
+        "No Active Session",
+        "You have not marked entry today. Please mark Entry first before marking Exit."
+      );
       return;
     }
     // Launch simulated working QR camera scanner
@@ -110,28 +121,38 @@ export default function QRScreen() {
       </View>
 
       <View style={[styles.modeToggle, { marginHorizontal: 20, marginTop: 16, backgroundColor: colors.muted }]}>
-        {(["entry", "exit"] as ScanMode[]).map(m => (
-          <Pressable
-            key={m}
-            style={[
-              styles.modeBtn,
-              { backgroundColor: mode === m ? colors.primary : "transparent" },
-            ]}
-            onPress={() => setMode(m)}
-          >
-            <MaterialCommunityIcons
-              name={m === "entry" ? "login" : "logout"}
-              size={16}
-              color={mode === m ? "#fff" : colors.mutedForeground}
-            />
-            <Text style={[styles.modeBtnText, {
-              color: mode === m ? "#fff" : colors.mutedForeground,
-              fontFamily: "Poppins_600SemiBold",
-            }]}>
-              {m === "entry" ? "Entry" : "Exit"}
-            </Text>
-          </Pressable>
-        ))}
+        {(["entry", "exit"] as ScanMode[]).map(m => {
+          // FIX BUG-06: Show exit as disabled when no active session
+          const isExitDisabled = m === "exit" && !activeSession;
+          return (
+            <Pressable
+              key={m}
+              style={[
+                styles.modeBtn,
+                { backgroundColor: mode === m ? colors.primary : "transparent", opacity: isExitDisabled ? 0.4 : 1 },
+              ]}
+              onPress={() => {
+                if (isExitDisabled) {
+                  Alert.alert("No Active Session", "Mark Entry first before selecting Exit.");
+                  return;
+                }
+                setMode(m);
+              }}
+            >
+              <MaterialCommunityIcons
+                name={m === "entry" ? "login" : "logout"}
+                size={16}
+                color={mode === m ? "#fff" : colors.mutedForeground}
+              />
+              <Text style={[styles.modeBtnText, {
+                color: mode === m ? "#fff" : colors.mutedForeground,
+                fontFamily: "Poppins_600SemiBold",
+              }]}>
+                {m === "entry" ? "Entry" : isExitDisabled ? "Exit (No Session)" : "Exit"}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={[styles.qrWrap, { marginHorizontal: 20, marginTop: 20, backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -267,7 +288,7 @@ export default function QRScreen() {
 
 // Helper wrapper to handle timer securely
 function ScannerTrigger({ onScan }: { onScan: () => void }) {
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       onScan();
     }, 2200);

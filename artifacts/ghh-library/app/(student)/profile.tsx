@@ -27,7 +27,7 @@ const MENU_ITEMS = [
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { wallet, streak, achievements } = useData();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
@@ -102,9 +102,13 @@ export default function ProfileScreen() {
                 { text: "Cancel", style: "cancel" },
                 { 
                   text: "Save", 
-                  onPress: (newName) => {
+                  onPress: async (newName) => {
                     if (newName && newName.trim().length > 0) {
+                      // FIX BUG-14: Actually save the name change to context + AsyncStorage
+                      await updateUser({ name: newName.trim() });
                       Alert.alert("Success", "Profile updated successfully!");
+                    } else {
+                      Alert.alert("Error", "Name cannot be empty.");
                     }
                   } 
                 }

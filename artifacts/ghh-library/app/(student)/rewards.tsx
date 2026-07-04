@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 
 function AchievementCard({ ach, onClaim }: { ach: ReturnType<typeof useData>["achievements"][0]; onClaim: () => void }) {
   const colors = useColors();
@@ -84,6 +85,9 @@ export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { achievements, streak, wallet, claimReward, buyPlan } = useData();
+  // FIX BUG-08: Get actual user referral code instead of hardcoded string
+  const { user } = useAuth();
+  const myReferralCode = user?.referralCode || "REFER24";
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
   const unlocked = achievements.filter(a => a.unlocked).length;
@@ -96,9 +100,10 @@ export default function RewardsScreen() {
   };
 
   const handleReferralPress = () => {
+    // FIX BUG-08: Use actual user referral code
     Alert.alert(
-      "Referral Copied!",
-      "Referral Code 'ARJUN2024' has been copied to clipboard. Share with your friends!",
+      "Referral Code",
+      `Your referral code is: ${myReferralCode}\nShare it with friends — both of you get 5 bonus credits!`,
       [
         {
           text: "Enter a Friend's Code",
@@ -113,7 +118,7 @@ export default function RewardsScreen() {
                   onPress: (code) => {
                     if (code && code.trim().length > 0) {
                       buyPlan(5, "Referral Bonus");
-                      Alert.alert("Referral Applied!", "5 credits pack added as referral reward!");
+                      Alert.alert("Referral Applied!", "5 credits added as referral reward!");
                     }
                   }
                 }
@@ -246,8 +251,9 @@ export default function RewardsScreen() {
           </View>
         </View>
         <View style={[styles.referralCode, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* FIX BUG-08: Show actual user referral code */}
           <Text style={[styles.referralCodeText, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
-            ARJUN2024
+            {myReferralCode}
           </Text>
         </View>
       </Pressable>

@@ -58,8 +58,14 @@ function AppPopupController() {
     }
   }, [pathname, settings?.showPopup, settings?.popupScreen]);
 
+  // FIX BUG-15: Handle inputText from popup (e.g. user-entered email/response)
   const handleClose = (inputText?: string) => {
     setModalVisible(false);
+    if (inputText && inputText.trim().length > 0) {
+      // Log popup response for analytics or admin processing
+      console.log("[Popup] User input received:", inputText);
+      // TODO: Send to analytics API when backend supports it
+    }
   };
 
   return <PopupModal visible={modalVisible} onClose={handleClose} />;

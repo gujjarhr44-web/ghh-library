@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -10,22 +11,30 @@ import {
   StyleSheet,
   Text,
   View,
+  Modal,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
 
-const PLANS = [
-  { id: "p1", credits: 15, price: 599, validity: 25, label: "Starter" },
-  { id: "p2", credits: 30, price: 999, validity: 45, label: "Popular", popular: true },
-  { id: "p3", credits: 60, price: 1799, validity: 75, label: "Pro" },
-];
+// FIX BUG-22: Removed local PLANS array — now sourced from DataContext (single source of truth)
 
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { wallet, attendanceRecords, leaves, buyPlan } = useData();
+  const { wallet, attendanceRecords, leaves, buyPlan, libraries, settings, requestPaymentVerification } = useData();
+  // FIX BUG-22: Use plans from library in DataContext instead of local duplicate array
+  const PLANS = libraries[0]?.plans ?? [];
   const [tab, setTab] = useState<"history" | "plans">("history");
+
+  // Payment QR Modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [transactionId, setTransactionId] = useState("");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
@@ -245,8 +254,8 @@ export default function WalletScreen() {
                   { backgroundColor: plan.popular ? colors.primary : colors.secondary, opacity: pressed ? 0.8 : 1 },
                 ]}
                 onPress={() => {
-                  buyPlan(plan.credits, `${plan.credits} Credits Pack`);
-                  alert(`Successfully purchased ${plan.credits} Credits!`);
+                  setSelectedPlan(plan);
+                  setShowPaymentModal(true);
                 }}
               >
                 <Text style={[styles.buyBtnText, {
@@ -261,6 +270,118 @@ export default function WalletScreen() {
           ))}
         </View>
       )}
+
+      {/* Payment QR Modal */}
+      <Modal visible={showPaymentModal} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", paddingHorizontal: 24 }}>
+          <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 20, borderWidth: 1, borderColor: colors.border, gap: 16, alignItems: "center" }}>
+            <Text style={{ fontSize: 18, fontFamily: "Poppins_700Bold", color: colors.foreground }}>
+              Scan QR to Pay
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Poppins_400Regular", textAlign: "center" }}>
+              Scan this QR using any UPI app (GPay, PhonePe, Paytm) to purchase <Text style={{ fontFamily: "Poppins_700Bold", color: colors.primary }}>{selectedPlan?.credits} Credits</Text> for <Text style={{ fontFamily: "Poppins_700Bold", color: colors.success }}>₹{selectedPlan?.price}</Text>.
+            </Text>
+
+            <View style={{ padding: 16, backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+              <QRCode
+                value={settings.paymentQR || `upi://pay?pa=ghh@upi&pn=GHHLibrary&am=${selectedPlan?.price || 0}&tn=CreditsPurchase`}
+                size={180}
+              />
+            </View>
+
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>
+              UPI ID: {settings.paymentQR?.split("pa=")[1]?.split("&")[0] || "ghh@upi"}
+            </Text>
+
+            {/* Transaction ID input box */}
+            <View style={{ width: "100%", gap: 6, marginVertical: 8 }}>
+              <Text style={{ fontSize: 12, color: colors.foreground, fontFamily: "Poppins_600SemiBold" }}>
+                Enter UPI Transaction ID / UTR Number:
+              </Text>
+              <TextInput
+                value={transactionId}
+                onChangeText={setTransactionId}
+                placeholder="e.g. 418290382918"
+                placeholderTextColor={colors.mutedForeground}
+                style={{
+                  height: 46,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  color: colors.foreground,
+                  backgroundColor: colors.background,
+                  fontSize: 14,
+                  fontFamily: "Poppins_400Regular"
+                }}
+              />
+            </View>
+
+            <View style={{ width: "100%", gap: 8 }}>
+              <Pressable
+                onPress={() => {
+                  if (!transactionId.trim()) {
+                    Alert.alert("Validation Error", "Please enter your UPI transaction reference ID.");
+                    return;
+                  }
+                  setCheckingPayment(true);
+                  setTimeout(() => {
+                    setCheckingPayment(false);
+                    setShowPaymentModal(false);
+                    
+                    // Request verification instead of adding credits instantly
+                    requestPaymentVerification(
+                      selectedPlan.credits,
+                      `${selectedPlan.credits} Credits Pack`,
+                      selectedPlan.validity,
+                      selectedPlan.price,
+                      transactionId.trim()
+                    );
+
+                    Alert.alert(
+                      "Verification Requested!",
+                      "Your transaction ID has been sent to the Library Owner. Once verified, credits will be added to your wallet."
+                    );
+                    setTransactionId("");
+                    setSelectedPlan(null);
+                  }, 1500);
+                }}
+                disabled={checkingPayment}
+                style={({ pressed }) => [
+                  { height: 48, borderRadius: 12, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", flexDirection: "row", gap: 8, opacity: pressed || checkingPayment ? 0.8 : 1 }
+                ]}
+              >
+                {checkingPayment ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <MaterialCommunityIcons name="send" size={16} color="#fff" />
+                    <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold", fontSize: 14 }}>
+                      Submit for Verification
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setShowPaymentModal(false);
+                  setSelectedPlan(null);
+                  setTransactionId("");
+                }}
+                disabled={checkingPayment}
+                style={({ pressed }) => [
+                  { height: 44, borderRadius: 12, backgroundColor: colors.muted, justifyContent: "center", alignItems: "center", opacity: pressed || checkingPayment ? 0.8 : 1 }
+                ]}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: "Poppins_600SemiBold", fontSize: 14 }}>
+                  Cancel
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

@@ -2,7 +2,11 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
-import { WebSocketServer, WebSocket } from "ws";
+import { createRequire } from "module";
+const _require = createRequire(import.meta.url);
+const wsLib = _require("ws");
+const WebSocketServer = wsLib.WebSocketServer || wsLib.Server;
+type WsClient = InstanceType<typeof wsLib.WebSocket>;
 import { createServer } from "http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -10,6 +14,16 @@ import { registerBroadcast } from "./lib/cms-store";
 
 const app: Express = express();
 
+// ── CORS Configuration ────────────────────────────────────────────────────────
+const corsOrigin = process.env.CORS_ORIGIN ?? "*";
+app.use(
+  cors({
+    origin: corsOrigin === "*" ? "*" : corsOrigin.split(",").map((o) => o.trim()),
+    credentials: true,
+  }),
+);
+
+// ── HTTP Request Logging ──────────────────────────────────────────────────────
 app.use(
   pinoHttp({
     logger,
@@ -29,14 +43,16 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
 // ── Static assets + publicPath ────────────────────────────────────────────────
-const publicPath = process.env.ADMIN_DIST_PATH || path.resolve(__dirname, "../../admin-dashboard/dist/public");
+const publicPath =
+  process.env.ADMIN_DIST_PATH ||
+  path.resolve(__dirname, "../../admin-dashboard/dist/public");
 
 // ── /api/health → Render.com health check ────────────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -53,10 +69,10 @@ app.get("/download", (_req, res) => {
   });
 });
 
-// Serve static assets of admin-dashboard
+// Serve static assets of admin-dashboard (includes APK file)
 app.use(express.static(publicPath));
 
-// Wildcard client route fallback to index.html
+// Wildcard client route fallback to index.html (SPA routing)
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith("/api") || req.path.startsWith("/ws")) {
     next();
@@ -74,9 +90,9 @@ export const httpServer = createServer(app);
 
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
-const clients = new Set<WebSocket>();
+const clients = new Set<WsClient>();
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WsClient) => {
   clients.add(ws);
   logger.info({ total: clients.size }, "WebSocket client connected");
 
@@ -101,7 +117,7 @@ registerBroadcast((event, data) => {
   const message = JSON.stringify({ event, data });
   let sent = 0;
   clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === wsLib.WebSocket.OPEN) {
       client.send(message);
       sent++;
     }

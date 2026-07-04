@@ -218,6 +218,8 @@ router.post("/settings", (req, res) => {
     popupMediaUrl: "popup.global.image_url",
     popupPrimaryButtonText: "popup.global.button_text",
     popupSecondaryButtonText: "popup.global.dismiss_text",
+    wifiSSID: "wifi.ssid",
+    paymentQR: "payment.qr_upi_uri",
   };
   const updates: Record<string, string> = {};
   for (const [k, v] of Object.entries(body)) {

@@ -15,6 +15,7 @@ import { LibraryCard } from "@/components/LibraryCard";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
+import { WifiAttendanceWidget } from "@/components/WifiAttendanceWidget";
 
 const FILTERS = ["All", "AC", "WiFi", "Parking", "24x7", "Open Now"];
 const CITIES = ["All Cities", "Pune", "New Delhi", "Bangalore", "Chennai"];
@@ -136,6 +137,7 @@ export default function HomeScreen() {
           </ScrollView>
         )}
       </View>
+      <WifiAttendanceWidget />
 
       <FlatList
         data={filtered}

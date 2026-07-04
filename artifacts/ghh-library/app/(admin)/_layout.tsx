@@ -17,7 +17,8 @@ function AdminTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#A78BFA",
+        // FIX A-13: Use colors.primary instead of hardcoded "#A78BFA" for correct theme support
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
           position: "absolute",

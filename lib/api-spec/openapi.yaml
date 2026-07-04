@@ -806,6 +806,8 @@ components:
           type: integer
         monthlyRevenue:
           type: number
+        expiringCreditsAlerts:
+          type: integer
 
     Seat:
       type: object

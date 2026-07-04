@@ -34,7 +34,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://ghh-library.onrender.com/"
         }
       ],
       "expo-font",
@@ -43,6 +43,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6339660e-701d-4188-8491-bbfbbc385628"
+      }
     }
   }
 }

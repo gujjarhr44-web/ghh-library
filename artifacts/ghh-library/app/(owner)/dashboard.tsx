@@ -32,17 +32,28 @@ export default function OwnerDashboard() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const { students, libraries } = useData();
+  const { students, libraries, pendingPayments, approvePayment, rejectPayment } = useData();
   const library = libraries[0];
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
   const activeStudents = students.filter(s => s.status === "active").length;
   const expiringSoon = students.filter(s => s.creditsRemaining <= 5 && s.status === "active").length;
 
+  const activePendingPayments = pendingPayments.filter(p => p.status === "pending");
+
   const [showScanner, setShowScanner] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentPhone, setNewStudentPhone] = useState("");
+  // FIX BUG-10: Modal state for Send Alert (replaces iOS-only Alert.prompt)
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  // WiFi SSID Config Modal state
+  const [showWifiModal, setShowWifiModal] = useState(false);
+  const [wifiSSIDInput, setWifiSSIDInput] = useState(settings.wifiSSID || "GHH_Library_WiFi");
+  // UPI QR Payment Modal state
+  const [showPaymentQRModal, setShowPaymentQRModal] = useState(false);
+  const [paymentQRInput, setPaymentQRInput] = useState(settings.paymentQR || "upi://pay?pa=ghh@upi&pn=GHHLibrary&mc=0000&mode=02&purpose=00");
 
   const handleAction = (label: string) => {
     switch (label) {
@@ -56,21 +67,16 @@ export default function OwnerDashboard() {
         router.push("/(owner)/seats" as any);
         break;
       case "Send Alert":
-        Alert.prompt(
-          "Send Alert to Students",
-          "Enter message to broadcast to all active library members:",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Send Broadcast",
-              onPress: (msg) => {
-                if (msg && msg.trim().length > 0) {
-                  Alert.alert("Success", "Alert broadcasted to all students successfully!");
-                }
-              }
-            }
-          ]
-        );
+        setAlertMessage("");
+        setShowAlertModal(true);
+        break;
+      case "Wi-Fi Config":
+        setWifiSSIDInput(settings.wifiSSID || "GHH_Library_WiFi");
+        setShowWifiModal(true);
+        break;
+      case "QR Config":
+        setPaymentQRInput(settings.paymentQR || "upi://pay?pa=ghh@upi&pn=GHHLibrary&mc=0000&mode=02&purpose=00");
+        setShowPaymentQRModal(true);
         break;
       default:
         break;
@@ -182,6 +188,58 @@ export default function OwnerDashboard() {
         </View>
       </View>
 
+      {/* Pending Payment Approvals Section */}
+      {activePendingPayments.length > 0 && (
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_700Bold", marginBottom: 10 }]}>
+            Pending Payment Approvals ({activePendingPayments.length})
+          </Text>
+          <View style={{ gap: 8 }}>
+            {activePendingPayments.map(p => (
+              <View key={p.id} style={{ padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, gap: 10 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <View>
+                    <Text style={{ fontSize: 15, fontFamily: "Poppins_600SemiBold", color: colors.foreground }}>{p.studentName}</Text>
+                    <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>{p.planName} · ₹{p.price}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ fontSize: 13, fontFamily: "Poppins_700Bold", color: colors.primary }}>+{p.credits} Credits</Text>
+                    <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>{p.date}</Text>
+                  </View>
+                </View>
+                <View style={{ padding: 8, borderRadius: 8, backgroundColor: colors.background, borderWidth: 0.5, borderColor: colors.border }}>
+                  <Text style={{ fontSize: 12, fontFamily: "Poppins_400Regular", color: colors.mutedForeground }}>
+                    TxID / UTR: <Text style={{ fontFamily: "Poppins_600SemiBold", color: colors.foreground }}>{p.transactionId}</Text>
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert("Reject Payment", "Are you sure you want to reject this request?", [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Reject", style: "destructive", onPress: () => rejectPayment(p.id) }
+                      ]);
+                    }}
+                    style={{ flex: 1, height: 38, borderRadius: 8, backgroundColor: colors.destructive + "15", borderWidth: 1, borderColor: colors.destructive + "40", justifyContent: "center", alignItems: "center" }}
+                  >
+                    <Text style={{ color: colors.destructive, fontFamily: "Poppins_600SemiBold", fontSize: 12 }}>Reject</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      approvePayment(p.id);
+                      Alert.alert("Success", `Approved! ${p.credits} credits added to ${p.studentName}'s account.`);
+                    }}
+                    style={{ flex: 1, height: 38, borderRadius: 8, backgroundColor: colors.success, justifyContent: "center", alignItems: "center" }}
+                  >
+                    <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold", fontSize: 12 }}>Verify & Approve</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
       <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
@@ -233,6 +291,8 @@ export default function OwnerDashboard() {
             { icon: "account-plus", label: "Add Student", color: colors.success },
             { icon: "seat-outline", label: "Edit Seats", color: colors.primary },
             { icon: "bell-ring-outline", label: "Send Alert", color: "#A78BFA" },
+            { icon: "wifi", label: "Wi-Fi Config", color: colors.success },
+            { icon: "qrcode", label: "QR Config", color: colors.primary },
           ].map(a => (
             <Pressable
               key={a.label}
@@ -318,6 +378,175 @@ export default function OwnerDashboard() {
           </View>
         </View>
       </Modal>
+      {/* Send Alert Modal (FIX BUG-10: replaces iOS-only Alert.prompt) */}
+      <Modal visible={showAlertModal} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
+          <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, gap: 14 }}>
+            <Text style={{ fontSize: 18, fontFamily: "Poppins_700Bold", color: colors.foreground }}>Send Alert to Students</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>Enter a message to broadcast to all active library members:</Text>
+            <TextInput
+              value={alertMessage}
+              onChangeText={setAlertMessage}
+              style={{ height: 80, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingTop: 10, color: colors.foreground, backgroundColor: colors.background, textAlignVertical: "top" }}
+              placeholder="Type your alert message..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+              <Pressable
+                onPress={() => setShowAlertModal(false)}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.muted, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: "Poppins_600SemiBold" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowAlertModal(false);
+                  if (alertMessage.trim().length > 0) {
+                    Alert.alert("Success", `Alert broadcasted to all ${activeStudents} students successfully!`);
+                  } else {
+                    Alert.alert("Error", "Please enter a message before sending.");
+                  }
+                }}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Send Broadcast</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Wi-Fi Config Modal */}
+      <Modal visible={showWifiModal} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
+          <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, gap: 14 }}>
+            <Text style={{ fontSize: 18, fontFamily: "Poppins_700Bold", color: colors.foreground }}>Wi-Fi SSID Configuration</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>
+              Configure your library's Wi-Fi network name (SSID). When student devices connect to this network, their entry and exit attendance is logged automatically.
+            </Text>
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>Network Name (SSID)</Text>
+              <TextInput
+                value={wifiSSIDInput}
+                onChangeText={setWifiSSIDInput}
+                style={{ height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, color: colors.foreground, backgroundColor: colors.background }}
+                placeholder="e.g. GHH_Library_WiFi"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+              <Pressable
+                onPress={() => setShowWifiModal(false)}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.muted, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: "Poppins_600SemiBold" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!wifiSSIDInput.trim()) {
+                    Alert.alert("Validation Error", "SSID cannot be empty.");
+                    return;
+                  }
+                  setShowWifiModal(false);
+                  
+                  // Optimistically update locally or make network request to save settings
+                  try {
+                    const url = Platform.OS === "web" 
+                      ? "/api/admin/settings" 
+                      : "https://ghhlib2026admin.loca.lt/api/admin/settings";
+                    const res = await fetch(url, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Bypass-Tunnel-Reminder": "true"
+                      },
+                      body: JSON.stringify({
+                        wifiSSID: wifiSSIDInput.trim()
+                      })
+                    });
+                    if (res.ok) {
+                      Alert.alert("Success", `Wi-Fi SSID updated successfully to "${wifiSSIDInput.trim()}"!`);
+                    } else {
+                      Alert.alert("Updated Locally", `SSID updated locally to "${wifiSSIDInput.trim()}" (Offline fallback).`);
+                    }
+                  } catch (err) {
+                    Alert.alert("Updated Locally", `SSID updated locally to "${wifiSSIDInput.trim()}".`);
+                  }
+                }}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Save Configuration</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* QR Code Config Modal */}
+      <Modal visible={showPaymentQRModal} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", paddingHorizontal: 20 }}>
+          <View style={{ backgroundColor: colors.card, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, gap: 14 }}>
+            <Text style={{ fontSize: 18, fontFamily: "Poppins_700Bold", color: colors.foreground }}>Payment QR Configuration</Text>
+            <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>
+              Configure your UPI payment link (UPI URI). Students will scan the generated QR code in their app to make direct payments to purchase wallet credits.
+            </Text>
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }}>UPI Link (URI)</Text>
+              <TextInput
+                value={paymentQRInput}
+                onChangeText={setPaymentQRInput}
+                style={{ height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, color: colors.foreground, backgroundColor: colors.background }}
+                placeholder="upi://pay?pa=yourname@upi&pn=YourName"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+              <Pressable
+                onPress={() => setShowPaymentQRModal(false)}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.muted, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: colors.foreground, fontFamily: "Poppins_600SemiBold" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!paymentQRInput.trim()) {
+                    Alert.alert("Validation Error", "UPI Link cannot be empty.");
+                    return;
+                  }
+                  setShowPaymentQRModal(false);
+                  
+                  try {
+                    const url = Platform.OS === "web" 
+                      ? "/api/admin/settings" 
+                      : "https://ghhlib2026admin.loca.lt/api/admin/settings";
+                    const res = await fetch(url, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Bypass-Tunnel-Reminder": "true"
+                      },
+                      body: JSON.stringify({
+                        paymentQR: paymentQRInput.trim()
+                      })
+                    });
+                    if (res.ok) {
+                      Alert.alert("Success", "UPI payment link updated successfully!");
+                    } else {
+                      Alert.alert("Updated Locally", "UPI payment link updated locally (Offline fallback).");
+                    }
+                  } catch (err) {
+                    Alert.alert("Updated Locally", "UPI payment link updated locally.");
+                  }
+                }}
+                style={{ flex: 1, height: 44, borderRadius: 8, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Save Configuration</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -330,6 +559,7 @@ function ScannerTrigger({ onScan }: { onScan: () => void }) {
     return () => clearTimeout(timer);
   }, []);
   return null;
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

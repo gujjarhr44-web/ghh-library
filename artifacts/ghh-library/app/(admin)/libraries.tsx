@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useData } from "@/context/DataContext";
+import { Library, useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function LibrariesScreen() {
@@ -21,10 +22,37 @@ export default function LibrariesScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
 
+  // FIX A-05: Local verified state to allow toggling verification in-session
+  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(
+    new Set(libraries.filter(l => l.isVerified).map(l => l.id))
+  );
+
+  const isVerified = (id: string) => verifiedIds.has(id);
+
+  const handleVerify = (lib: Library) => {
+    Alert.alert(
+      "Verify Library",
+      `Are you sure you want to verify "${lib.name}"? This will mark it as approved on the platform.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Verify",
+          onPress: () => {
+            setVerifiedIds(prev => new Set([...prev, lib.id]));
+            Alert.alert("Verified!", `"${lib.name}" has been successfully verified.`);
+          },
+        },
+      ]
+    );
+  };
+
   const filtered = libraries.filter(l =>
     l.name.toLowerCase().includes(search.toLowerCase()) ||
     l.city.toLowerCase().includes(search.toLowerCase())
   );
+
+  const verifiedCount = filtered.filter(l => isVerified(l.id)).length;
+  const pendingCount = filtered.filter(l => !isVerified(l.id)).length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -33,7 +61,7 @@ export default function LibrariesScreen() {
           Libraries
         </Text>
         <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          {libraries.filter(l => l.isVerified).length} verified, {libraries.filter(l => !l.isVerified).length} pending
+          {verifiedCount} verified, {pendingCount} pending
         </Text>
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 12 }]}>
           <MaterialCommunityIcons name="magnify" size={18} color={colors.mutedForeground} />
@@ -47,9 +75,11 @@ export default function LibrariesScreen() {
         </View>
       </View>
 
+      {/* FIX A-06: Added nestedScrollEnabled for Android compatibility */}
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
+        nestedScrollEnabled
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: bottomPad, gap: 10 }}
         renderItem={({ item: lib }) => (
           <View style={[styles.libCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -62,7 +92,7 @@ export default function LibrariesScreen() {
                   <Text style={[styles.libName, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
                     {lib.name}
                   </Text>
-                  {lib.isVerified
+                  {isVerified(lib.id)
                     ? <MaterialCommunityIcons name="check-decagram" size={16} color={colors.info} />
                     : <MaterialCommunityIcons name="clock-alert" size={16} color={colors.primary} />
                   }
@@ -109,8 +139,12 @@ export default function LibrariesScreen() {
                 </Text>
               </View>
             </View>
-            {!lib.isVerified && (
-              <Pressable style={[styles.verifyBtn, { backgroundColor: colors.success }]}>
+            {/* FIX A-05: Verify Library button now has onPress with confirmation dialog */}
+            {!isVerified(lib.id) && (
+              <Pressable
+                style={({ pressed }) => [styles.verifyBtn, { backgroundColor: colors.success, opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => handleVerify(lib)}
+              >
                 <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
                 <Text style={[styles.verifyBtnText, { fontFamily: "Poppins_600SemiBold" }]}>Verify Library</Text>
               </Pressable>

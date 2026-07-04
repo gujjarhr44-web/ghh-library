@@ -11,7 +11,7 @@ services:
     # Build command - Admin dashboard + API server दोनों build होंगे
     buildCommand: |
       npm install -g pnpm &&
-      pnpm install --frozen-lockfile &&
+      pnpm install --no-frozen-lockfile &&
       cd artifacts/admin-dashboard && PORT=3000 BASE_PATH=/ pnpm run build &&
       cd ../api-server && pnpm run build
     
@@ -25,6 +25,10 @@ services:
         value: 10000
       - key: ADMIN_DIST_PATH
         value: ./artifacts/admin-dashboard/dist/public
+      - key: DATABASE_URL
+        sync: false   # Render dashboard mein manually set karein
+      - key: CORS_ORIGIN
+        value: "*"    # Deploy ke baad apna domain set karein
 
     # Health check
     healthCheckPath: /api/health

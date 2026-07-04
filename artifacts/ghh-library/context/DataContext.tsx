@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
 export interface Library {
@@ -77,6 +77,7 @@ export interface CreditWallet {
   totalPurchased: number;
 }
 
+// FIX BUG-07: Added `claimed?: boolean` to Achievement interface
 export interface Achievement {
   id: string;
   title: string;
@@ -86,6 +87,7 @@ export interface Achievement {
   progress: number;
   target: number;
   reward: string;
+  claimed?: boolean;
 }
 
 export interface StudentRecord {
@@ -239,25 +241,24 @@ const SEATS: Seat[] = [
   }),
 ];
 
-const ATTENDANCE_RECORDS: AttendanceRecord[] = [
-  { id: "a1", date: "2025-06-04", dayOfWeek: "Wed", entryTime: "06:15 AM", exitTime: "11:45 AM", duration: "5h 30m", creditDeducted: true },
-  { id: "a2", date: "2025-06-03", dayOfWeek: "Tue", entryTime: "06:05 AM", exitTime: "11:30 AM", duration: "5h 25m", creditDeducted: true },
-  { id: "a3", date: "2025-06-02", dayOfWeek: "Mon", entryTime: "06:20 AM", exitTime: "12:10 PM", duration: "5h 50m", creditDeducted: true },
-  { id: "a4", date: "2025-06-01", dayOfWeek: "Sun", entryTime: "", exitTime: "", duration: "", creditDeducted: false, isLeave: true },
-  { id: "a5", date: "2025-05-31", dayOfWeek: "Sat", entryTime: "06:10 AM", exitTime: "11:50 AM", duration: "5h 40m", creditDeducted: true },
-  { id: "a6", date: "2025-05-30", dayOfWeek: "Fri", entryTime: "06:00 AM", exitTime: "12:00 PM", duration: "6h 00m", creditDeducted: true },
-  { id: "a7", date: "2025-05-29", dayOfWeek: "Thu", entryTime: "06:30 AM", exitTime: "11:15 AM", duration: "4h 45m", creditDeducted: true },
-  { id: "a8", date: "2025-05-28", dayOfWeek: "Wed", entryTime: "06:00 AM", exitTime: "11:45 AM", duration: "5h 45m", creditDeducted: true },
-];
-
-const ACHIEVEMENTS: Achievement[] = [
-  { id: "ach1", title: "First Step", description: "First day of attendance", iconName: "star", unlocked: true, progress: 1, target: 1, reward: "+2 Credits" },
-  { id: "ach2", title: "Week Warrior", description: "7 day attendance streak", iconName: "flame", unlocked: true, progress: 7, target: 7, reward: "+5 Credits" },
-  { id: "ach3", title: "Fortnight Focus", description: "15 day attendance streak", iconName: "trophy", unlocked: true, progress: 15, target: 15, reward: "+10 Credits" },
-  { id: "ach4", title: "Month Master", description: "30 day attendance streak", iconName: "medal", unlocked: false, progress: 17, target: 30, reward: "+20 Credits" },
-  { id: "ach5", title: "Century Club", description: "100 total attendance days", iconName: "ribbon", unlocked: false, progress: 23, target: 100, reward: "+30 Credits" },
-  { id: "ach6", title: "Early Bird", description: "Arrive before 6:30 AM for 7 days", iconName: "sunny", unlocked: false, progress: 5, target: 7, reward: "10% Discount" },
-];
+// FIX BUG-18 + BUG-19: Generate mock data with RECENT dates so streak computes correctly
+function generateRecentAttendanceRecords(): AttendanceRecord[] {
+  const records: AttendanceRecord[] = [];
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  for (let i = 0; i < 8; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const dayOfWeek = days[d.getDay()];
+    if (i === 3) {
+      // Day 3 ago is a leave
+      records.push({ id: `a${i + 1}`, date: dateStr, dayOfWeek, entryTime: "", exitTime: "", duration: "", creditDeducted: false, isLeave: true });
+    } else {
+      records.push({ id: `a${i + 1}`, date: dateStr, dayOfWeek, entryTime: "06:15 AM", exitTime: "11:45 AM", duration: "5h 30m", creditDeducted: true });
+    }
+  }
+  return records;
+}
 
 const STUDENT_RECORDS: StudentRecord[] = [
   { id: "st1", name: "Arjun Sharma", email: "arjun@email.com", phone: "+91 98765 43210", seat: "A-12", shift: "Morning", creditsRemaining: 28, planExpiry: "2025-07-20", attendance: 87, status: "active", joinDate: "2025-01-15" },
@@ -288,6 +289,8 @@ export interface AppSettings {
   popupPromptPlaceholder: string;
   popupPrimaryButtonText: string;
   popupSecondaryButtonText: string;
+  wifiSSID?: string;
+  paymentQR?: string;
 }
 
 interface DataContextValue {
@@ -301,11 +304,29 @@ interface DataContextValue {
   leaves: Leave[];
   students: StudentRecord[];
   settings: AppSettings;
+  // FIX BUG-12: buyPlan now accepts validityDays to update planExpiry
   addLeave: (date: string) => void;
   cancelLeave: (id: string) => void;
-  buyPlan: (credits: number, planName: string) => void;
+  buyPlan: (credits: number, planName: string, validityDays?: number) => void;
   claimReward: (rewardId: string, credits: number) => void;
-  addAttendanceRecord: (isEntry: boolean) => void;
+  hasActiveSession: () => boolean;
+  pendingPayments: PendingPayment[];
+  requestPaymentVerification: (credits: number, planName: string, validityDays: number, price: number, transactionId: string) => void;
+  approvePayment: (paymentId: string) => void;
+  rejectPayment: (paymentId: string) => void;
+}
+
+export interface PendingPayment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  credits: number;
+  planName: string;
+  validityDays: number;
+  price: number;
+  transactionId: string;
+  date: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -315,7 +336,7 @@ const DEFAULT_WALLET: CreditWallet = {
   consumed: 23,
   expired: 2,
   planName: "30 Credits Pack",
-  planExpiry: "2025-07-20",
+  planExpiry: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   totalPurchased: 53,
 };
 
@@ -338,43 +359,141 @@ const DEFAULT_SETTINGS: AppSettings = {
   popupMediaUrl: "",
   popupPromptPlaceholder: "",
   popupPrimaryButtonText: "Okay",
-  popupSecondaryButtonText: "Dismiss"
+  popupSecondaryButtonText: "Dismiss",
+  wifiSSID: "GHH_Library_WiFi",
+  paymentQR: "upi://pay?pa=ghh@upi&pn=GHHLibrary&mc=0000&mode=02&purpose=00"
 };
+
+// FIX BUG-05: Calculate actual duration from time strings like "06:15 AM"
+function calcDuration(entryTimeStr: string, exitTimeStr: string): string {
+  try {
+    const parseMinutes = (t: string): number => {
+      const parts = t.trim().split(" ");
+      const [hStr, mStr] = parts[0].split(":");
+      const period = parts[1];
+      let h = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      if (period === "PM" && h !== 12) h += 12;
+      if (period === "AM" && h === 12) h = 0;
+      return h * 60 + m;
+    };
+    const entryMin = parseMinutes(entryTimeStr);
+    const exitMin = parseMinutes(exitTimeStr);
+    const diff = exitMin >= entryMin ? exitMin - entryMin : 24 * 60 - entryMin + exitMin;
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return `${h}h ${m.toString().padStart(2, "0")}m`;
+  } catch {
+    return "--";
+  }
+}
+
+// FIX BUG-19: Compute streak dynamically from attendance records
+function computeStreak(records: AttendanceRecord[]): number {
+  const attendedDates = new Set(
+    records.filter(r => r.creditDeducted || r.isLeave).map(r => r.date)
+  );
+  let streak = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = 0; i <= 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    if (attendedDates.has(dateStr)) {
+      streak++;
+    } else {
+      break; // gap in streak
+    }
+  }
+  return streak;
+}
+
+// Validate that fetched settings has required fields (FIX BUG-16)
+function isValidSettings(data: unknown): data is AppSettings {
+  if (!data || typeof data !== "object") return false;
+  const s = data as Record<string, unknown>;
+  return (
+    typeof s.appTitle === "string" &&
+    typeof s.themeColor === "string" &&
+    typeof s.showPopup === "boolean"
+  );
+}
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [leaves, setLeaves] = useState<Leave[]>([
-    { id: "l1", date: "2025-06-01", status: "approved", creditSaved: true },
-    { id: "l2", date: "2025-05-25", status: "approved", creditSaved: true },
+    { id: "l1", date: (() => { const d = new Date(); d.setDate(d.getDate() - 5); return d.toISOString().split("T")[0]; })(), status: "approved", creditSaved: true },
+    { id: "l2", date: (() => { const d = new Date(); d.setDate(d.getDate() - 12); return d.toISOString().split("T")[0]; })(), status: "approved", creditSaved: true },
   ]);
 
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [wallet, setWallet] = useState<CreditWallet>(DEFAULT_WALLET);
+
+  // FIX BUG-07: achievements now have `claimed` field tracked properly
   const [achievements, setAchievements] = useState<Achievement[]>([
-    { id: "ach1", title: "First Step", description: "First day of attendance", iconName: "star", unlocked: true, progress: 1, target: 1, reward: "+2 Credits" },
-    { id: "ach2", title: "Week Warrior", description: "7 day attendance streak", iconName: "fire", unlocked: true, progress: 7, target: 7, reward: "+5 Credits" },
-    { id: "ach3", title: "Fortnight Focus", description: "15 day attendance streak", iconName: "trophy", unlocked: true, progress: 15, target: 15, reward: "+10 Credits" },
-    { id: "ach4", title: "Month Master", description: "30 day attendance streak", iconName: "medal", unlocked: false, progress: 17, target: 30, reward: "+20 Credits" },
-    { id: "ach5", title: "Century Club", description: "100 total attendance days", iconName: "ribbon", unlocked: false, progress: 23, target: 100, reward: "+30 Credits" },
-    { id: "ach6", title: "Early Bird", description: "Arrive before 6:30 AM for 7 days", iconName: "weather-sunny", unlocked: false, progress: 5, target: 7, reward: "10% Discount" },
+    { id: "ach1", title: "First Step", description: "First day of attendance", iconName: "star", unlocked: true, progress: 1, target: 1, reward: "+2 Credits", claimed: false },
+    { id: "ach2", title: "Week Warrior", description: "7 day attendance streak", iconName: "fire", unlocked: true, progress: 7, target: 7, reward: "+5 Credits", claimed: false },
+    { id: "ach3", title: "Fortnight Focus", description: "15 day attendance streak", iconName: "trophy", unlocked: true, progress: 15, target: 15, reward: "+10 Credits", claimed: false },
+    { id: "ach4", title: "Month Master", description: "30 day attendance streak", iconName: "medal", unlocked: false, progress: 17, target: 30, reward: "+20 Credits", claimed: false },
+    { id: "ach5", title: "Century Club", description: "100 total attendance days", iconName: "ribbon", unlocked: false, progress: 23, target: 100, reward: "+30 Credits", claimed: false },
+    { id: "ach6", title: "Early Bird", description: "Arrive before 6:30 AM for 7 days", iconName: "weather-sunny", unlocked: false, progress: 5, target: 7, reward: "10% Discount", claimed: false },
   ]);
 
+  // FIX BUG-18: Load attendanceRecords from AsyncStorage on mount
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(generateRecentAttendanceRecords());
+
+  useEffect(() => {
+    const loadRecords = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("@ghh_attendance");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAttendanceRecords(parsed);
+          }
+        }
+      } catch (err) {
+        console.log("Could not load stored attendance:", err);
+      }
+    };
+    loadRecords();
+  }, []);
+
+  // FIX BUG-03: Settings polling interval changed from 5s to 60s
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const url = Platform.OS === "web" 
-          ? "/api/admin/settings" 
-          : "http://192.168.0.100:5000/api/admin/settings";
-        const res = await fetch(url);
+        const url = Platform.OS === "web"
+          ? "/api/admin/settings"
+          : "https://ghhlib2026admin.loca.lt/api/admin/settings";
+        const res = await fetch(url, {
+          headers: {
+            "Bypass-Tunnel-Reminder": "true",
+            "Accept": "application/json"
+          }
+        });
         if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
+          // FIX BUG-16: Validate JSON response before applying
+          let data: unknown;
+          try {
+            data = await res.json();
+          } catch {
+            console.log("Settings response was not valid JSON, keeping current settings");
+            return;
+          }
+          if (isValidSettings(data)) {
+            setSettings(data);
+          } else {
+            console.log("Settings response failed validation, keeping current settings");
+          }
         }
       } catch (err) {
         console.log("Using local settings fallback:", err);
       }
     };
     fetchSettings();
-    const interval = setInterval(fetchSettings, 5000);
+    // FIX BUG-03: Was 5000ms, now 60000ms (1 minute) — reduces battery drain
+    const interval = setInterval(fetchSettings, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -388,19 +507,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setLeaves(prev => [newLeave, ...prev]);
   }, []);
 
+  // FIX BUG-21: cancelLeave removes the entry (no credit adjustment needed for future leaves)
   const cancelLeave = useCallback((id: string) => {
-    setLeaves(prev => prev.filter(l => l.id !== id));
+    setLeaves(prev => prev.map(l => l.id === id ? { ...l, status: "cancelled" as const } : l).filter(l => l.status !== "cancelled"));
   }, []);
 
-  const buyPlan = useCallback((credits: number, planName: string) => {
-    setWallet(prev => ({
-      ...prev,
-      available: prev.available + credits,
-      totalPurchased: prev.totalPurchased + credits,
-      planName: planName,
-    }));
+  // FIX BUG-12: buyPlan now accepts validityDays and updates planExpiry accordingly
+  const buyPlan = useCallback((credits: number, planName: string, validityDays?: number) => {
+    setWallet(prev => {
+      const newExpiry = validityDays
+        ? new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+        : prev.planExpiry;
+      return {
+        ...prev,
+        available: prev.available + credits,
+        totalPurchased: prev.totalPurchased + credits,
+        planName,
+        planExpiry: newExpiry,
+      };
+    });
   }, []);
 
+  // FIX BUG-07: claimReward properly sets claimed=true (now that interface has the field)
   const claimReward = useCallback((rewardId: string, credits: number) => {
     setAchievements(prev => prev.map(ach => {
       if (ach.id === rewardId) {
@@ -414,12 +542,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(ATTENDANCE_RECORDS);
-
+  // FIX BUG-05 + BUG-18: Proper duration calculation + AsyncStorage persistence
   const addAttendanceRecord = useCallback((isEntry: boolean) => {
     const todayStr = new Date().toISOString().split("T")[0];
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+
     if (isEntry) {
       const newRec: AttendanceRecord = {
         id: `a_${Date.now()}`,
@@ -428,28 +555,103 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         entryTime: timeStr,
         exitTime: "--",
         duration: "Active Session",
-        creditDeducted: false
+        creditDeducted: false,
       };
-      setAttendanceRecords(prev => [newRec, ...prev]);
+      setAttendanceRecords(prev => {
+        const updated = [newRec, ...prev];
+        AsyncStorage.setItem("@ghh_attendance", JSON.stringify(updated)).catch(console.error);
+        return updated;
+      });
     } else {
       setAttendanceRecords(prev => {
         const copy = [...prev];
         if (copy.length > 0 && copy[0].exitTime === "--") {
+          // FIX BUG-05: Calculate actual duration from entry time
+          const duration = calcDuration(copy[0].entryTime, timeStr);
           copy[0] = {
             ...copy[0],
             exitTime: timeStr,
-            duration: "5h 30m",
-            creditDeducted: true
+            duration, // actual calculated duration, not hardcoded
+            creditDeducted: true,
           };
+          // Deduct credit from wallet
           setWallet(w => ({
             ...w,
             available: Math.max(0, w.available - 1),
-            consumed: w.consumed + 1
+            consumed: w.consumed + 1,
           }));
         }
+        AsyncStorage.setItem("@ghh_attendance", JSON.stringify(copy)).catch(console.error);
         return copy;
       });
     }
+  }, []);
+
+  // FIX BUG-06: Helper to check if there is an active (entry-only) session
+  const hasActiveSession = useCallback((): boolean => {
+    return attendanceRecords.length > 0 && attendanceRecords[0].exitTime === "--";
+  }, [attendanceRecords]);
+
+  // FIX BUG-19: Compute streak dynamically from attendance records
+  const streak = useMemo(() => computeStreak(attendanceRecords), [attendanceRecords]);
+
+  // Pending Payments state
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
+
+  // Load pending payments on mount
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("@ghh_pending_payments");
+        if (stored) setPendingPayments(JSON.parse(stored));
+      } catch (err) {
+        console.log("Could not load stored payments:", err);
+      }
+    };
+    loadPayments();
+  }, []);
+
+  const requestPaymentVerification = useCallback((credits: number, planName: string, validityDays: number, price: number, transactionId: string) => {
+    const newPayment: PendingPayment = {
+      id: `pay_${Date.now()}`,
+      studentId: "u001", // Default logged-in student id
+      studentName: "Arjun Sharma", // Default logged-in student name
+      credits,
+      planName,
+      validityDays,
+      price,
+      transactionId,
+      date: new Date().toISOString().split("T")[0],
+      status: "pending"
+    };
+    setPendingPayments(prev => {
+      const updated = [newPayment, ...prev];
+      AsyncStorage.setItem("@ghh_pending_payments", JSON.stringify(updated)).catch(console.error);
+      return updated;
+    });
+  }, []);
+
+  const approvePayment = useCallback((paymentId: string) => {
+    setPendingPayments(prev => {
+      const updated = prev.map(p => {
+        if (p.id === paymentId) {
+          // If approved, update status and add credits to wallet
+          buyPlan(p.credits, p.planName, p.validityDays);
+          return { ...p, status: "approved" as const };
+        }
+        return p;
+      });
+      AsyncStorage.setItem("@ghh_pending_payments", JSON.stringify(updated)).catch(console.error);
+      return updated;
+    });
+  }, [buyPlan]);
+
+  const rejectPayment = useCallback((paymentId: string) => {
+    setPendingPayments(prev => {
+      const updated = prev.map(p => p.id === paymentId ? { ...p, status: "rejected" as const } : p);
+      AsyncStorage.setItem("@ghh_pending_payments", JSON.stringify(updated)).catch(console.error);
+      return updated;
+    });
   }, []);
 
   return (
@@ -460,7 +662,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       attendanceRecords,
       wallet,
       achievements,
-      streak: 17,
+      streak,
       leaves,
       students: STUDENT_RECORDS,
       settings,
@@ -469,6 +671,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       buyPlan,
       claimReward,
       addAttendanceRecord,
+      hasActiveSession,
+      pendingPayments,
+      requestPaymentVerification,
+      approvePayment,
+      rejectPayment
     }}>
       {children}
     </DataContext.Provider>

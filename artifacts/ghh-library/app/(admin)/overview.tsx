@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -23,8 +24,23 @@ export default function AdminOverview() {
   const { libraries, students } = useData();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
-  const totalStudents = students.length * libraries.length;
+
+  // FIX A-01: totalStudents was students.length * libraries.length (wrong). Now just students.length.
+  const totalStudents = students.length;
   const totalRevenue = libraries.reduce((sum, l) => sum + l.monthlyRevenue, 0);
+
+  // FIX A-02: Pending libraries computed dynamically instead of hardcoded string
+  const pendingLibraries = libraries.filter(l => !l.isVerified);
+
+  // FIX A-04: Logout wrapped in try/catch to prevent crash if logout() throws
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/");
+    } catch (err) {
+      Alert.alert("Error", "Could not sign out. Please try again.");
+    }
+  };
 
   return (
     <ScrollView
@@ -43,7 +59,7 @@ export default function AdminOverview() {
         </View>
         <Pressable
           style={[styles.logoutBtn, { backgroundColor: colors.muted }]}
-          onPress={async () => { await logout(); router.replace("/"); }}
+          onPress={handleLogout}
         >
           <MaterialCommunityIcons name="logout" size={18} color={colors.foreground} />
         </Pressable>
@@ -80,20 +96,27 @@ export default function AdminOverview() {
         </View>
       </View>
 
-      <View style={[styles.alertCard, { marginHorizontal: 20, marginTop: 12, backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "40" }]}>
-        <MaterialCommunityIcons name="alert-circle" size={20} color={colors.destructive} />
-        <View style={styles.alertInfo}>
-          <Text style={[styles.alertTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
-            1 Library Pending Verification
-          </Text>
-          <Text style={[styles.alertDesc, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-            Bright Minds Study Zone · Chennai
-          </Text>
+      {/* FIX A-02 + A-03: Show pending alert only if there are actually pending libraries, with functional Review button */}
+      {pendingLibraries.length > 0 && (
+        <View style={[styles.alertCard, { marginHorizontal: 20, marginTop: 12, backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "40" }]}>
+          <MaterialCommunityIcons name="alert-circle" size={20} color={colors.destructive} />
+          <View style={styles.alertInfo}>
+            <Text style={[styles.alertTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+              {pendingLibraries.length} {pendingLibraries.length === 1 ? "Library" : "Libraries"} Pending Verification
+            </Text>
+            <Text style={[styles.alertDesc, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+              {pendingLibraries.map(l => l.name).join(", ")}
+            </Text>
+          </View>
+          {/* FIX A-03: Review button now navigates to Libraries tab */}
+          <Pressable
+            style={[styles.alertBtn, { backgroundColor: colors.destructive }]}
+            onPress={() => router.push("/(admin)/libraries" as any)}
+          >
+            <Text style={[styles.alertBtnText, { fontFamily: "Poppins_600SemiBold" }]}>Review</Text>
+          </Pressable>
         </View>
-        <Pressable style={[styles.alertBtn, { backgroundColor: colors.destructive }]}>
-          <Text style={[styles.alertBtnText, { fontFamily: "Poppins_600SemiBold" }]}>Review</Text>
-        </Pressable>
-      </View>
+      )}
 
       <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_700Bold", marginBottom: 10 }]}>

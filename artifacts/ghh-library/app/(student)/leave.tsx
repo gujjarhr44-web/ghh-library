@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Dimensions,
   Platform,
   Pressable,
   ScrollView,
@@ -25,6 +26,10 @@ const DATES = Array.from({ length: 7 }, (_, i) => {
     day: d.getDate(),
   };
 });
+
+// FIX BUG-13: Calculate responsive date card width to avoid overflow on small screens
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const DATE_CARD_WIDTH = Math.floor((SCREEN_WIDTH - 40 - 8 * 6) / 7);
 
 export default function LeaveScreen() {
   const colors = useColors();
@@ -190,7 +195,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, marginBottom: 4 },
   sectionSub: { fontSize: 13, marginBottom: 12 },
   dateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  dateCard: { width: 74, alignItems: "center", borderRadius: 14, padding: 12, borderWidth: 1, gap: 4 },
+  dateCard: { width: DATE_CARD_WIDTH, alignItems: "center", borderRadius: 14, padding: 10, borderWidth: 1, gap: 4 },
   dateDay: { fontSize: 12 },
   dateNum: { fontSize: 20 },
   markBtn: { height: 52, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },

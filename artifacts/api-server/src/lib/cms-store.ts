@@ -118,6 +118,12 @@ const DEFAULT_SETTINGS: AppSetting[] = [
   { key: "announcement.banner.dismissible", value: "true", type: "boolean", category: "announcements", label: "Banner Dismissible" },
   { key: "announcement.banner.link", value: "", type: "text", category: "announcements", label: "Banner Link URL" },
   { key: "announcement.banner.link_text", value: "Learn More", type: "text", category: "announcements", label: "Banner Link Text" },
+
+  // ── WIFI ATTENDANCE ──
+  { key: "wifi.ssid", value: "GHH_Library_WiFi", type: "text", category: "data", label: "Library Wi-Fi SSID", description: "Wifi name configured for auto-attendance" },
+
+  // ── PAYMENT CONFIG ──
+  { key: "payment.qr_upi_uri", value: "upi://pay?pa=ghh@upi&pn=GHHLibrary&mc=0000&mode=02&purpose=00", type: "text", category: "data", label: "Payment UPI URI / QR Data", description: "UPI payment link parsed for QR scanner during purchase (upi://pay?...)" },
 ];
 
 // ── Settings Store ────────────────────────────────────────────────────────────
@@ -218,5 +224,7 @@ export function getLegacySettings() {
     popupPromptPlaceholder: "",
     popupPrimaryButtonText: getSettingValue("popup.global.button_text", "Okay"),
     popupSecondaryButtonText: getSettingValue("popup.global.dismiss_text", "Dismiss"),
+    wifiSSID: getSettingValue("wifi.ssid", "GHH_Library_WiFi"),
+    paymentQR: getSettingValue("payment.qr_upi_uri", "upi://pay?pa=ghh@upi&pn=GHHLibrary&mc=0000&mode=02&purpose=00"),
   };
 }

@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -10,19 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useData } from "@/context/DataContext";
+import { StudentRecord, useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
-
-const ALL_USERS = [
-  { id: "1", name: "Arjun Sharma", email: "student@ghh.com", role: "student", status: "active", joined: "Jan 2025" },
-  { id: "2", name: "Priya Patel", email: "owner@ghh.com", role: "owner", status: "active", joined: "Nov 2023" },
-  { id: "3", name: "Rahul Mehta", email: "admin@ghh.com", role: "admin", status: "active", joined: "Jan 2023" },
-  { id: "4", name: "Meera Nair", email: "meera@email.com", role: "student", status: "active", joined: "Feb 2025" },
-  { id: "5", name: "Vikram Singh", email: "vikram@lib.com", role: "owner", status: "active", joined: "Aug 2023" },
-  { id: "6", name: "Kabir Khan", email: "kabir@email.com", role: "student", status: "active", joined: "Mar 2025" },
-  { id: "7", name: "Sneha Reddy", email: "sneha@email.com", role: "student", status: "suspended", joined: "Jan 2025" },
-  { id: "8", name: "Ananya Krishnan", email: "ananya@lib.com", role: "owner", status: "active", joined: "Sep 2023" },
-];
 
 const ROLE_COLORS: Record<string, string> = {
   student: "#4F8EF7",
@@ -30,15 +20,77 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "#A78BFA",
 };
 
+// FIX A-07: ALL_USERS now built from DataContext's real student data + supplemented with owner/admin entries
+const EXTRA_USERS = [
+  { id: "u_owner1", name: "Priya Patel",     email: "owner@ghh.com",   role: "owner",   status: "active",    joined: "Nov 2023" },
+  { id: "u_owner2", name: "Vikram Singh",    email: "vikram@lib.com",  role: "owner",   status: "active",    joined: "Aug 2023" },
+  { id: "u_owner3", name: "Ananya Krishnan", email: "ananya@lib.com",  role: "owner",   status: "active",    joined: "Sep 2023" },
+  { id: "u_admin1", name: "Rahul Mehta",     email: "admin@ghh.com",   role: "admin",   status: "active",    joined: "Jan 2023" },
+];
+
+function studentToUser(s: StudentRecord) {
+  const year = s.joinDate.split("-")[0];
+  const monthIdx = parseInt(s.joinDate.split("-")[1], 10) - 1;
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return {
+    id: s.id,
+    name: s.name,
+    email: s.email,
+    role: "student" as const,
+    status: s.status === "active" ? "active" : "suspended",
+    joined: `${months[monthIdx]} ${year}`,
+  };
+}
+
 export default function UsersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  // FIX A-07: Pull students from DataContext instead of hardcoded array
+  const { students } = useData();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  // FIX A-09: Track suspended users locally
+  const [suspendedIds, setSuspendedIds] = useState<Set<string>>(
+    new Set(students.filter(s => s.status !== "active").map(s => s.id))
+  );
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
 
-  const filtered = ALL_USERS.filter(u => {
+  // Build full user list from real DataContext students + extra owner/admin records
+  const allUsers = [
+    ...students.map(studentToUser),
+    ...EXTRA_USERS,
+  ];
+
+  const isSuspended = (id: string) => suspendedIds.has(id);
+
+  // FIX A-09: Toggle suspend/unsuspend action
+  const handleToggleSuspend = (user: typeof allUsers[0]) => {
+    const suspended = isSuspended(user.id);
+    Alert.alert(
+      suspended ? "Unsuspend User" : "Suspend User",
+      suspended
+        ? `Restore access for ${user.name}?`
+        : `Are you sure you want to suspend ${user.name}? They will lose access.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: suspended ? "Unsuspend" : "Suspend",
+          style: suspended ? "default" : "destructive",
+          onPress: () => {
+            setSuspendedIds(prev => {
+              const next = new Set(prev);
+              if (suspended) next.delete(user.id);
+              else next.add(user.id);
+              return next;
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const filtered = allUsers.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === "all" || u.role === roleFilter;
     return matchSearch && matchRole;
@@ -51,7 +103,7 @@ export default function UsersScreen() {
           Users
         </Text>
         <Text style={[styles.pageSubtitle, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          {ALL_USERS.length} total users
+          {allUsers.length} total users
         </Text>
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 12 }]}>
           <MaterialCommunityIcons name="magnify" size={18} color={colors.mutedForeground} />
@@ -87,9 +139,12 @@ export default function UsersScreen() {
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
+        nestedScrollEnabled
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: bottomPad, gap: 10 }}
         renderItem={({ item: u }) => {
           const rc = ROLE_COLORS[u.role] ?? colors.primary;
+          const suspended = isSuspended(u.id);
+          const effectiveStatus = suspended ? "suspended" : u.status;
           return (
             <View style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.avatar, { backgroundColor: rc + "20" }]}>
@@ -114,16 +169,29 @@ export default function UsersScreen() {
                     {u.role}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, {
-                  backgroundColor: u.status === "active" ? colors.success + "20" : colors.destructive + "20",
-                }]}>
-                  <Text style={[styles.statusText, {
-                    color: u.status === "active" ? colors.success : colors.destructive,
-                    fontFamily: "Poppins_500Medium",
-                  }]}>
-                    {u.status}
-                  </Text>
-                </View>
+                {/* FIX A-09: Status badge is now a tappable button for suspend/unsuspend */}
+                {u.role !== "admin" && (
+                  <Pressable
+                    onPress={() => handleToggleSuspend(u)}
+                    style={[styles.statusBadge, {
+                      backgroundColor: effectiveStatus === "active" ? colors.success + "20" : colors.destructive + "20",
+                    }]}
+                  >
+                    <Text style={[styles.statusText, {
+                      color: effectiveStatus === "active" ? colors.success : colors.destructive,
+                      fontFamily: "Poppins_500Medium",
+                    }]}>
+                      {effectiveStatus === "active" ? "active" : "suspended"}
+                    </Text>
+                  </Pressable>
+                )}
+                {u.role === "admin" && (
+                  <View style={[styles.statusBadge, { backgroundColor: colors.success + "20" }]}>
+                    <Text style={[styles.statusText, { color: colors.success, fontFamily: "Poppins_500Medium" }]}>
+                      active
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           );

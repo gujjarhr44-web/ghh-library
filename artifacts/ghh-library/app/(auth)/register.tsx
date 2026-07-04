@@ -17,6 +17,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, type UserRole } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
+// FIX BUG-09: Validation helpers
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function RegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -34,12 +37,26 @@ export default function RegisterScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const handleRegister = async () => {
-    if (!name || !email || !phone || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+    // FIX BUG-09: Proper validation before registration
+    if (!name.trim()) {
+      Alert.alert("Error", "Please enter your full name.");
+      return;
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address (e.g. you@example.com).");
+      return;
+    }
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10) {
+      Alert.alert("Invalid Phone", "Please enter a valid 10-digit mobile number.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
       return;
     }
     setLoading(true);
-    const ok = await register({ name, email, phone, password, role: role as UserRole });
+    const ok = await register({ name: name.trim(), email: email.trim().toLowerCase(), phone, password, role: role as UserRole });
     setLoading(false);
     if (ok) {
       if (role === "student") router.replace("/(student)/home");

@@ -66,6 +66,7 @@ router.get("/stats", (_req, res) => {
     todayAttendance: 5,
     creditsConsumedToday: 6,
     monthlyRevenue: 72000,
+    expiringCreditsAlerts: OWNER_STUDENTS.filter(s => s.creditsRemaining <= 5 && s.status === "active").length,
   });
 });
 
