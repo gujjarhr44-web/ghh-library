@@ -145,6 +145,7 @@ export default function SuperAdminLibraries() {
                     </TableRow>
                   ))
                 ) : filteredLibraries.length > 0 ? (
+                  filteredLibraries.map((lib) => (
                     <TableRow key={lib.id}>
                       <TableCell>
                         <div className="font-semibold text-gray-900 dark:text-gray-100">{lib.name}</div>
