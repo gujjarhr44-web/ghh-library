@@ -8,12 +8,8 @@ services:
     region: singapore   # India के सबसे पास
     plan: free
     
-    # Build command - Admin dashboard + API server दोनों build होंगे
-    buildCommand: |
-      npm install -g pnpm &&
-      pnpm install --no-frozen-lockfile &&
-      cd artifacts/admin-dashboard && PORT=3000 BASE_PATH=/ pnpm run build &&
-      cd ../api-server && pnpm run build
+    # Build command - Uses corepack/npx pnpm to avoid read-only global npm directories
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && cd artifacts/admin-dashboard && PORT=3000 BASE_PATH=/ pnpm run build && cd ../api-server && pnpm run build
     
     # Start command - API server चलाएगा (admin dashboard भी serve करेगा)
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
