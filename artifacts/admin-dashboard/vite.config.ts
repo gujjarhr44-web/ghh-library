@@ -16,6 +16,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(process.cwd(), "src"),
       "@assets": path.resolve(process.cwd(), "..", "..", "attached_assets"),
+      "@workspace/api-client-react/src": path.resolve(process.cwd(), "..", "..", "lib", "api-client-react", "src"),
+      "@workspace/api-client-react": path.resolve(process.cwd(), "..", "..", "lib", "api-client-react", "src", "index.ts"),
     },
     dedupe: ["react", "react-dom", "@tanstack/react-query"],
   },
@@ -30,7 +32,7 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {
-      strict: true,
+      strict: false,
     },
     proxy: {
       "/api": {
