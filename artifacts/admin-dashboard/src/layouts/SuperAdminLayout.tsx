@@ -14,7 +14,17 @@ import {
   Moon,
   Menu,
   Settings,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ShieldAlert,
+  Tag,
+  MessageSquare,
+  ShieldCheck,
+  Megaphone,
+  Zap,
+  Activity,
+  LifeBuoy,
+  Bug,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -45,9 +55,18 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { href: "/super-admin/students", label: studentsLabel, icon: Users },
     { href: "/super-admin/payments", label: paymentsLabel, icon: CreditCard },
     { href: "/super-admin/attendance", label: attendanceLabel, icon: Calendar },
-    { href: "/super-admin/notifications", label: notificationsLabel, icon: Bell },
-    { href: "/super-admin/settings", label: settingsLabel, icon: Settings },
+    { href: "/super-admin/coupons", label: "Coupons & Offers", icon: Tag },
+    { href: "/super-admin/whatsapp", label: "WhatsApp Center", icon: MessageSquare },
+    { href: "/super-admin/ai", label: "AI Copilot Center", icon: Sparkles },
+    { href: "/super-admin/emergency", label: "🚨 Emergency Broadcast", icon: Megaphone },
+    { href: "/super-admin/rules", label: "Rules & Automation", icon: Zap },
+    { href: "/super-admin/bugs", label: "Bug & Crash Center", icon: Bug },
+    { href: "/super-admin/security", label: "Fraud & Security", icon: ShieldAlert },
+    { href: "/super-admin/support", label: "Support Desk", icon: LifeBuoy },
+    { href: "/super-admin/system-health", label: "System Health", icon: Activity },
+    { href: "/super-admin/audit-logs", label: "Audit Trail", icon: ShieldCheck },
     { href: "/super-admin/control-panel", label: `🎛️ ${controlPanelLabel}`, icon: SlidersHorizontal, highlight: true },
+    { href: "/super-admin/settings", label: settingsLabel, icon: Settings },
   ];
 
   useEffect(() => {

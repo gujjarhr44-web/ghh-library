@@ -59,12 +59,32 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "ghh-library", timestamp: new Date().toISOString() });
 });
 
-// ── /download → APK Download Page ────────────────────────────────────────────
+// ── /download → APK Download Landing Webpage (Link #2) ────────────────────────
 app.get("/download", (_req, res) => {
   const downloadPage = path.resolve(publicPath, "download.html");
   res.sendFile(downloadPage, (err) => {
     if (err) {
-      res.status(404).send("Download page not found. Please build admin-dashboard.");
+      // Fallback if public folder path resolves to source public
+      const srcDownloadPage = path.resolve(__dirname, "../../admin-dashboard/public/download.html");
+      res.sendFile(srcDownloadPage, (srcErr) => {
+        if (srcErr) {
+          res.status(404).send("Download landing page loading...");
+        }
+      });
+    }
+  });
+});
+
+// ── /ghh-library.apk & /download/apk → Direct APK File Stream (Link #1) ──────
+app.get(["/ghh-library.apk", "/download/apk"], (_req, res) => {
+  const apkPath = path.resolve(publicPath, "ghh-library.apk");
+  res.setHeader("Content-Type", "application/vnd.android.package-archive");
+  res.setHeader("Content-Disposition", 'attachment; filename="ghh-library.apk"');
+  
+  res.sendFile(apkPath, (err) => {
+    if (err) {
+      // Stream fallback or redirect to Expo Cloud Build CDN (Link #3)
+      res.redirect("https://expo.dev/accounts/gujjarhr44/projects/ghh-library/builds");
     }
   });
 });
@@ -112,7 +132,7 @@ wss.on("connection", (ws: WsClient) => {
   });
 });
 
-// Register broadcast function so cms-store can push updates
+// Register broadcast function so cms-store and db-repo can push updates
 registerBroadcast((event, data) => {
   const message = JSON.stringify({ event, data });
   let sent = 0;
@@ -123,6 +143,17 @@ registerBroadcast((event, data) => {
     }
   });
   logger.info({ event, clients: sent }, "WebSocket broadcast sent");
+});
+
+import("./lib/realtime").then(({ onRealtimeEvent }) => {
+  onRealtimeEvent((event, payload) => {
+    const message = JSON.stringify({ event, data: payload, timestamp: new Date().toISOString() });
+    clients.forEach((client) => {
+      if (client.readyState === wsLib.WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
 });
 
 export default app;

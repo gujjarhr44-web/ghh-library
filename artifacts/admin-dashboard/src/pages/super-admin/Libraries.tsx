@@ -145,14 +145,28 @@ export default function SuperAdminLibraries() {
                     </TableRow>
                   ))
                 ) : filteredLibraries.length > 0 ? (
-                  filteredLibraries.map((lib: AdminLibrary) => (
                     <TableRow key={lib.id}>
-                      <TableCell className="font-medium">{lib.name}</TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{lib.name}</div>
+                        {/* Box-Based Unique Library ID (PIN + Code) */}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="bg-primary/10 border border-primary/20 text-primary font-mono text-[11px] px-1.5 py-0.5 rounded font-bold">
+                            {(lib as any).pincode || "127306"}
+                          </span>
+                          <span className="text-muted-foreground font-bold">-</span>
+                          <span className="bg-muted border font-mono text-[11px] px-1.5 py-0.5 rounded font-bold uppercase text-foreground">
+                            {(lib as any).libraryCode || lib.id.slice(0, 6).toUpperCase()}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div>{lib.ownerName}</div>
                         <div className="text-xs text-muted-foreground">{lib.mobile}</div>
                       </TableCell>
-                      <TableCell>{lib.city}</TableCell>
+                      <TableCell>
+                        <div>{lib.city}</div>
+                        <div className="text-xs text-muted-foreground">PIN: {(lib as any).pincode || "127306"}</div>
+                      </TableCell>
                       <TableCell className="text-right">{lib.totalSeats}</TableCell>
                       <TableCell className="text-right">{lib.activeStudents}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(lib.monthlyRevenue)}</TableCell>

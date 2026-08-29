@@ -23,6 +23,7 @@ async function buildAll() {
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
+    packages: "external",
     alias: {
       "@workspace/api-zod": path.resolve(artifactDir, "../../lib/api-zod/src/index.ts"),
       "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/index.ts"),

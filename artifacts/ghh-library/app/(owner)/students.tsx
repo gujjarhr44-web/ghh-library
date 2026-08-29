@@ -179,8 +179,11 @@ export default function StudentsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <MaterialCommunityIcons name="account-search" size={48} color={colors.border} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground, fontFamily: "Poppins_500Medium" }]}>
-              No students found
+            <Text style={[styles.emptyText, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+              No Students Enrolled Yet
+            </Text>
+            <Text style={{ color: colors.mutedForeground, fontFamily: "Poppins_400Regular", fontSize: 13, textAlign: "center", paddingHorizontal: 30 }}>
+              अभी कोई student registered नहीं है। Add students or share your library QR to get started.
             </Text>
           </View>
         }

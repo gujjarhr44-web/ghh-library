@@ -1,233 +1,456 @@
 import { Router } from "express";
+import {
+  statsRepo,
+  libraryRepo,
+  userRepo,
+  paymentRepo,
+  attendanceRepo,
+  remoteConfigRepo,
+  popupRepo,
+  bannerRepo,
+  auditLogRepo,
+  fraudRepo,
+  couponRepo,
+  whatsappRepo,
+  rulesEngineRepo,
+  supportTicketRepo,
+  systemHealthRepo,
+  digitalTwinRepo,
+  bugRepo,
+  crashRepo,
+  incidentRepo,
+} from "../lib/db-repo";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const LIBRARIES = [
-  { id: "lib1", name: "GHH Central Library", ownerName: "Priya Patel", mobile: "+91 98765 43210", city: "Mumbai", area: "Andheri West", totalSeats: 60, activeStudents: 48, status: "approved", registrationDate: "2024-01-15", monthlyRevenue: 72000, occupancyRate: 80, facilities: ["Wi-Fi", "AC", "Parking", "Cafeteria", "Lockers"] },
-  { id: "lib2", name: "StudySpace Premium", ownerName: "Amit Sharma", mobile: "+91 87654 32109", city: "Pune", area: "Koregaon Park", totalSeats: 40, activeStudents: 32, status: "approved", registrationDate: "2024-02-20", monthlyRevenue: 48000, occupancyRate: 75, facilities: ["Wi-Fi", "AC", "Whiteboards"] },
-  { id: "lib3", name: "Focus Zone Library", ownerName: "Ravi Kumar", mobile: "+91 76543 21098", city: "Bangalore", area: "Indiranagar", totalSeats: 50, activeStudents: 38, status: "pending", registrationDate: "2024-05-10", monthlyRevenue: 0, occupancyRate: 0, facilities: ["Wi-Fi", "AC"] },
-  { id: "lib4", name: "Scholar's Den", ownerName: "Neha Singh", mobile: "+91 65432 10987", city: "Delhi", area: "Connaught Place", totalSeats: 35, activeStudents: 10, status: "suspended", registrationDate: "2024-03-05", monthlyRevenue: 12000, occupancyRate: 28, facilities: ["Wi-Fi"] },
-  { id: "lib5", name: "Knowledgehub", ownerName: "Suresh Verma", mobile: "+91 55432 10988", city: "Hyderabad", area: "Banjara Hills", totalSeats: 45, activeStudents: 40, status: "approved", registrationDate: "2024-04-01", monthlyRevenue: 60000, occupancyRate: 89, facilities: ["Wi-Fi", "AC", "Cafeteria"] },
-];
-
-const STUDENTS = [
-  { id: "s1", name: "Arjun Sharma", email: "arjun@example.com", mobile: "+91 90000 11111", library: "GHH Central Library", seat: "A1", plan: "Monthly", creditsRemaining: 18, attendancePercent: 85, status: "active", joinDate: "2024-03-01" },
-  { id: "s2", name: "Priya Mehra", email: "priya@example.com", mobile: "+91 90000 22222", library: "GHH Central Library", seat: "B3", plan: "Quarterly", creditsRemaining: 45, attendancePercent: 92, status: "active", joinDate: "2024-02-15" },
-  { id: "s3", name: "Rahul Das", email: "rahul@example.com", mobile: "+91 90000 33333", library: "StudySpace Premium", seat: "C2", plan: "Monthly", creditsRemaining: 3, attendancePercent: 65, status: "active", joinDate: "2024-04-10" },
-  { id: "s4", name: "Sneha Joshi", email: "sneha@example.com", mobile: "+91 90000 44444", library: "GHH Central Library", seat: "D5", plan: "Monthly", creditsRemaining: 0, attendancePercent: 40, status: "expired", joinDate: "2024-01-20" },
-  { id: "s5", name: "Vivek Nair", email: "vivek@example.com", mobile: "+91 90000 55555", library: "Knowledgehub", seat: "A4", plan: "Quarterly", creditsRemaining: 55, attendancePercent: 78, status: "active", joinDate: "2024-05-01" },
-  { id: "s6", name: "Kavya Reddy", email: "kavya@example.com", mobile: "+91 90000 66666", library: "GHH Central Library", seat: "E2", plan: "Monthly", creditsRemaining: 10, attendancePercent: 55, status: "suspended", joinDate: "2024-03-25" },
-  { id: "s7", name: "Nikhil Patil", email: "nikhil@example.com", mobile: "+91 90000 77777", library: "StudySpace Premium", seat: "B1", plan: "Monthly", creditsRemaining: 22, attendancePercent: 88, status: "active", joinDate: "2024-04-15" },
-  { id: "s8", name: "Ananya Iyer", email: "ananya@example.com", mobile: "+91 90000 88888", library: "Knowledgehub", seat: "C3", plan: "Quarterly", creditsRemaining: 60, attendancePercent: 95, status: "active", joinDate: "2024-02-01" },
-];
-
-const PAYMENTS = [
-  { id: "p1", transactionId: "TXN001234", studentName: "Arjun Sharma", libraryName: "GHH Central Library", amount: 1299, method: "UPI", date: "2024-06-01", status: "success" },
-  { id: "p2", transactionId: "TXN001235", studentName: "Priya Mehra", libraryName: "GHH Central Library", amount: 3499, method: "Card", date: "2024-06-01", status: "success" },
-  { id: "p3", transactionId: "TXN001236", studentName: "Rahul Das", libraryName: "StudySpace Premium", amount: 1299, method: "UPI", date: "2024-05-30", status: "success" },
-  { id: "p4", transactionId: "TXN001237", studentName: "Sneha Joshi", libraryName: "GHH Central Library", amount: 1299, method: "Net Banking", date: "2024-05-28", status: "failed" },
-  { id: "p5", transactionId: "TXN001238", studentName: "Vivek Nair", libraryName: "Knowledgehub", amount: 3499, method: "UPI", date: "2024-05-25", status: "success" },
-  { id: "p6", transactionId: "TXN001239", studentName: "Ananya Iyer", libraryName: "Knowledgehub", amount: 3499, method: "Card", date: "2024-05-20", status: "success" },
-  { id: "p7", transactionId: "TXN001240", studentName: "Nikhil Patil", libraryName: "StudySpace Premium", amount: 1299, method: "UPI", date: "2024-05-18", status: "success" },
-  { id: "p8", transactionId: "TXN001241", studentName: "Kavya Reddy", libraryName: "GHH Central Library", amount: 1299, method: "UPI", date: "2024-05-15", status: "refunded" },
-];
-
-const ATTENDANCE_LOGS = [
-  { id: "al1", studentName: "Arjun Sharma", library: "GHH Central Library", date: "2024-06-04", entryTime: "09:05", exitTime: "13:00", shift: "Morning", status: "present", creditsDeducted: 1 },
-  { id: "al2", studentName: "Priya Mehra", library: "GHH Central Library", date: "2024-06-04", entryTime: "09:10", exitTime: null, shift: "Morning", status: "present", creditsDeducted: null },
-  { id: "al3", studentName: "Rahul Das", library: "StudySpace Premium", date: "2024-06-04", entryTime: "14:05", exitTime: "18:00", shift: "Afternoon", status: "present", creditsDeducted: 1 },
-  { id: "al4", studentName: "Sneha Joshi", library: "GHH Central Library", date: "2024-06-04", entryTime: null, exitTime: null, shift: "Morning", status: "absent", creditsDeducted: 1 },
-  { id: "al5", studentName: "Vivek Nair", library: "Knowledgehub", date: "2024-06-04", entryTime: "09:15", exitTime: "13:10", shift: "Morning", status: "late", creditsDeducted: 1 },
-  { id: "al6", studentName: "Kavya Reddy", library: "GHH Central Library", date: "2024-06-04", entryTime: null, exitTime: null, shift: "Afternoon", status: "leave", creditsDeducted: 0 },
-  { id: "al7", studentName: "Ananya Iyer", library: "Knowledgehub", date: "2024-06-04", entryTime: "09:02", exitTime: "18:05", shift: "Full Day", status: "present", creditsDeducted: 2 },
-  { id: "al8", studentName: "Nikhil Patil", library: "StudySpace Premium", date: "2024-06-04", entryTime: "09:08", exitTime: "13:00", shift: "Morning", status: "present", creditsDeducted: 1 },
-];
-
-const NOTIFICATIONS: Array<{ id: string; title: string; message: string; target: string; targetId: string | null; sentAt: string; type: string }> = [
-  { id: "n1", title: "Platform Maintenance", message: "The platform will be under maintenance on June 10 from 2 AM to 4 AM.", target: "all", targetId: null, sentAt: "2024-06-03T10:00:00Z", type: "alert" },
-  { id: "n2", title: "Summer Special Offer", message: "Get 20% bonus credits on all quarterly plans this month!", target: "all", targetId: null, sentAt: "2024-06-01T09:00:00Z", type: "promotion" },
-  { id: "n3", title: "New Library Approved", message: "Knowledgehub in Hyderabad is now approved and accepting students.", target: "all", targetId: null, sentAt: "2024-05-28T11:00:00Z", type: "announcement" },
-];
-
-// ── Admin Stats ──────────────────────────────────────────────────────────────
-
-router.get("/stats", (_req, res) => {
-  res.json({
-    totalLibraries: 5,
-    activeLibraries: 3,
-    pendingApprovals: 1,
-    totalStudents: 168,
-    activeStudents: 142,
-    dailyAttendance: 127,
-    monthlyAttendance: 2860,
-    totalSeats: 230,
-    occupiedSeats: 168,
-    availableSeats: 62,
-    totalRevenue: 428500,
-    monthlyRevenue: 192000,
-    dailyNewRegistrations: 4,
-  });
-});
-
-// ── Chart data ──────────────────────────────────────────────────────────────
-
-router.get("/charts/student-growth", (_req, res) => {
-  res.json([
-    { month: "Jan", value: 42, secondary: 38 },
-    { month: "Feb", value: 68, secondary: 60 },
-    { month: "Mar", value: 95, secondary: 85 },
-    { month: "Apr", value: 118, secondary: 105 },
-    { month: "May", value: 145, secondary: 130 },
-    { month: "Jun", value: 168, secondary: 142 },
-  ]);
-});
-
-router.get("/charts/attendance-trend", (_req, res) => {
-  res.json([
-    { month: "Jan", value: 1240 },
-    { month: "Feb", value: 1580 },
-    { month: "Mar", value: 2100 },
-    { month: "Apr", value: 2350 },
-    { month: "May", value: 2680 },
-    { month: "Jun", value: 2860 },
-  ]);
-});
-
-router.get("/charts/revenue-trend", (_req, res) => {
-  res.json([
-    { month: "Jan", value: 52000 },
-    { month: "Feb", value: 84000 },
-    { month: "Mar", value: 125000 },
-    { month: "Apr", value: 158000 },
-    { month: "May", value: 182000 },
-    { month: "Jun", value: 192000 },
-  ]);
-});
-
-// ── Libraries ────────────────────────────────────────────────────────────────
-
-router.get("/libraries", (req, res) => {
-  let libs = [...LIBRARIES];
-  const { status, search } = req.query;
-  if (status && typeof status === "string") {
-    libs = libs.filter((l) => l.status === status);
+// ── 1. Platform-Wide Admin Stats (Rule #67, #68, #80) ─────────────────────────
+router.get("/stats", async (_req, res) => {
+  try {
+    const stats = await statsRepo.getAdminStats();
+    res.json(stats);
+  } catch (err) {
+    logger.error({ err }, "Error getting admin stats");
+    res.status(500).json({ error: "Failed to retrieve stats" });
   }
-  if (search && typeof search === "string") {
-    const s = search.toLowerCase();
-    libs = libs.filter((l) => l.name.toLowerCase().includes(s) || l.ownerName.toLowerCase().includes(s) || l.city.toLowerCase().includes(s));
-  }
+});
+
+// ── 2. Chart Trends ──────────────────────────────────────────────────────────
+router.get("/charts/student-growth", async (_req, res) => {
+  const users = await userRepo.listAll();
+  const studentCount = users.filter((u) => u.role === "student").length;
+  res.json([
+    { month: "Jan", value: 0, secondary: 0 },
+    { month: "Feb", value: 0, secondary: 0 },
+    { month: "Mar", value: 0, secondary: 0 },
+    { month: "Apr", value: 0, secondary: 0 },
+    { month: "May", value: 0, secondary: 0 },
+    { month: "Current", value: studentCount, secondary: studentCount },
+  ]);
+});
+
+router.get("/charts/attendance-trend", async (_req, res) => {
+  res.json([
+    { month: "Jan", value: 0 },
+    { month: "Feb", value: 0 },
+    { month: "Mar", value: 0 },
+    { month: "Apr", value: 0 },
+    { month: "May", value: 0 },
+    { month: "Current", value: 0 },
+  ]);
+});
+
+router.get("/charts/revenue-trend", async (_req, res) => {
+  res.json([
+    { month: "Jan", value: 0 },
+    { month: "Feb", value: 0 },
+    { month: "Mar", value: 0 },
+    { month: "Apr", value: 0 },
+    { month: "May", value: 0 },
+    { month: "Current", value: 0 },
+  ]);
+});
+
+// ── 3. Libraries Management ──────────────────────────────────────────────────
+router.get("/libraries", async (_req, res) => {
+  const libs = await libraryRepo.listAll();
   res.json(libs);
 });
 
-router.get("/libraries/:id", (req, res) => {
-  const lib = LIBRARIES.find((l) => l.id === req.params["id"]);
-  if (!lib) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(lib);
-});
+// ── 4. Users / Students Management ───────────────────────────────────────────
+router.get("/users", async (req, res) => {
+  let users = await userRepo.listAll();
+  const { role, status, search } = req.query;
 
-router.patch("/libraries/:id", (req, res) => {
-  const lib = LIBRARIES.find((l) => l.id === req.params["id"]);
-  if (!lib) { res.status(404).json({ error: "Not found" }); return; }
-  const { status } = req.body;
-  if (status) (lib as typeof lib & { status: string }).status = status;
-  res.json(lib);
-});
-
-// ── Students ─────────────────────────────────────────────────────────────────
-
-router.get("/students", (req, res) => {
-  let students = [...STUDENTS];
-  const { library, status, search } = req.query;
-  if (library && typeof library === "string") {
-    students = students.filter((s) => s.library === library);
+  if (role && typeof role === "string") {
+    users = users.filter((u) => u.role === role);
   }
   if (status && typeof status === "string") {
-    students = students.filter((s) => s.status === status);
+    users = users.filter((u) => u.status === status);
   }
   if (search && typeof search === "string") {
     const q = search.toLowerCase();
-    students = students.filter((s) => s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q));
+    users = users.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(q));
   }
-  res.json(students);
+
+  res.json(users);
 });
 
-// ── Payments ─────────────────────────────────────────────────────────────────
-
-router.get("/payments", (_req, res) => {
-  res.json(PAYMENTS);
+// ── 5. Payments Management ───────────────────────────────────────────────────
+router.get("/payments", async (req, res) => {
+  const payments = await paymentRepo.listByLibrary((req.query["libraryId"] as string) || "");
+  res.json(payments);
 });
 
-// ── Attendance ───────────────────────────────────────────────────────────────
-
-router.get("/attendance", (req, res) => {
-  let logs = [...ATTENDANCE_LOGS];
-  const { library } = req.query;
-  if (library && typeof library === "string") {
-    logs = logs.filter((l) => l.library === library);
-  }
+// ── 6. Attendance Logs ───────────────────────────────────────────────────────
+router.get("/attendance", async (req, res) => {
+  const logs = await attendanceRepo.listByLibraryToday((req.query["libraryId"] as string) || "");
   res.json(logs);
 });
 
-// ── Notifications ────────────────────────────────────────────────────────────
-
-router.get("/notifications", (_req, res) => {
-  res.json(NOTIFICATIONS);
+// ── 7. REMOTE CONFIG & CMS SETTINGS (Rules #53 - #85) ────────────────────────
+router.get("/cms/settings", async (_req, res) => {
+  const settings = await remoteConfigRepo.getAll();
+  res.json(settings);
 });
 
-router.post("/notifications", (req, res) => {
-  const { title, message, target, targetId, type } = req.body;
-  const notif = {
-    id: `n${Date.now()}`,
-    title,
-    message,
-    target,
-    targetId: targetId ?? null,
-    sentAt: new Date().toISOString(),
-    type,
-  };
-  NOTIFICATIONS.unshift(notif);
-  res.status(201).json(notif);
+router.patch("/cms/settings/:key", async (req, res) => {
+  const { value } = req.body;
+  const key = req.params["key"];
+  const updated = await remoteConfigRepo.set(key, String(value));
+
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "UPDATE_SETTING",
+    targetEntity: "remote_config",
+    targetId: key,
+    newValues: { key, value },
+    ipAddress: req.ip,
+  });
+
+  res.json(updated);
 });
 
-import { getLegacySettings, updateSetting, bulkUpdateSettings } from "../lib/cms-store";
+router.post("/cms/settings/bulk", async (req, res) => {
+  const { updates } = req.body as { updates: Record<string, string> };
+  const result = await remoteConfigRepo.bulkSet(updates || {});
 
-router.get("/settings", (_req, res) => {
-  res.json(getLegacySettings());
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "BULK_UPDATE_SETTINGS",
+    targetEntity: "remote_config",
+    targetId: "bulk",
+    newValues: updates,
+    ipAddress: req.ip,
+  });
+
+  res.json(result);
 });
 
-router.post("/settings", (req, res) => {
-  const body = req.body as Record<string, unknown>;
-  const keyMap: Record<string, string> = {
-    appTitle: "app.title",
-    welcomeMessage: "owner.welcome_message",
-    welcomeSubheading: "owner.welcome_subheading",
-    themeColor: "theme.primary_color",
-    isBookSeatClickable: "btn.book_seat",
-    isMarkAttendanceClickable: "btn.mark_attendance",
-    isApplyLeaveClickable: "btn.apply_leave",
-    isPurchasePlanClickable: "btn.purchase_plan",
-    showAchievements: "feature.achievements",
-    showQuickStats: "feature.quick_stats",
-    showFacilities: "feature.facilities",
-    showPopup: "popup.global.enabled",
-    popupScreen: "popup.global.target",
-    popupTitle: "popup.global.title",
-    popupMessage: "popup.global.message",
-    popupMediaUrl: "popup.global.image_url",
-    popupPrimaryButtonText: "popup.global.button_text",
-    popupSecondaryButtonText: "popup.global.dismiss_text",
-    wifiSSID: "wifi.ssid",
-    paymentQR: "payment.qr_upi_uri",
-  };
-  const updates: Record<string, string> = {};
-  for (const [k, v] of Object.entries(body)) {
-    const cmsKey = keyMap[k];
-    if (cmsKey) updates[cmsKey] = String(v);
+router.post("/cms/settings/publish", async (req, res) => {
+  const { changeSummary } = req.body;
+  const published = await remoteConfigRepo.publishVersion(changeSummary || "Master Admin Published Configuration");
+  res.json(published);
+});
+
+router.post("/cms/settings/rollback/:version", async (req, res) => {
+  const version = Number(req.params["version"]);
+  try {
+    const result = await remoteConfigRepo.rollbackToVersion(version);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
   }
-  bulkUpdateSettings(updates);
-  res.json(getLegacySettings());
+});
+
+router.get("/cms/settings/versions", async (_req, res) => {
+  const history = await remoteConfigRepo.getVersionHistory();
+  res.json(history);
+});
+
+// ── 8. TARGETED POPUPS & BANNERS (Rules #63 - #66) ───────────────────────────
+router.get("/popups", async (_req, res) => {
+  const popups = await popupRepo.listAll();
+  res.json(popups);
+});
+
+router.post("/popups", async (req, res) => {
+  const popup = await popupRepo.create(req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "CREATE_POPUP",
+    targetEntity: "popup",
+    targetId: popup.id,
+    newValues: popup,
+    ipAddress: req.ip,
+  });
+  res.status(201).json(popup);
+});
+
+router.delete("/popups/:id", async (req, res) => {
+  await popupRepo.delete(req.params["id"]);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "DELETE_POPUP",
+    targetEntity: "popup",
+    targetId: req.params["id"],
+    ipAddress: req.ip,
+  });
+  res.json({ success: true });
+});
+
+router.get("/banners", async (_req, res) => {
+  const banners = await bannerRepo.listAll();
+  res.json(banners);
+});
+
+router.post("/banners", async (req, res) => {
+  const banner = await bannerRepo.create(req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "CREATE_BANNER",
+    targetEntity: "banner",
+    targetId: banner.id,
+    newValues: banner,
+    ipAddress: req.ip,
+  });
+  res.status(201).json(banner);
+});
+
+router.delete("/banners/:id", async (req, res) => {
+  await bannerRepo.delete(req.params["id"]);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "DELETE_BANNER",
+    targetEntity: "banner",
+    targetId: req.params["id"],
+    ipAddress: req.ip,
+  });
+  res.json({ success: true });
+});
+
+// ── 9. AUDIT LOGS (Rule #85) ─────────────────────────────────────────────────
+router.get("/audit-logs", async (req, res) => {
+  const limit = req.query["limit"] ? Number(req.query["limit"]) : 50;
+  const logs = await auditLogRepo.list({ limit });
+  res.json(logs);
+});
+
+// ── 10. SECURITY & FRAUD DETECTION (Rules #4, #5, #7) ────────────────────────
+router.get("/security/overview", async (_req, res) => {
+  const overview = await fraudRepo.getOverview();
+  res.json(overview);
+});
+
+router.get("/security/events", async (req, res) => {
+  const status = (req.query["status"] as string) || undefined;
+  const severity = (req.query["severity"] as string) || undefined;
+  const limit = req.query["limit"] ? Number(req.query["limit"]) : 50;
+  const events = await fraudRepo.list({ status, severity, limit });
+  res.json(events);
+});
+
+router.post("/security/events/:id/action", async (req, res) => {
+  const { action, notes } = req.body as { action: "dismiss" | "restrict" | "suspend" | "resolve"; notes?: string };
+  const id = req.params["id"];
+  const result = await fraudRepo.takeAction(id, action, notes);
+  res.json(result);
+});
+
+// ── 11. COUPONS & OFFERS (Rule #10) ──────────────────────────────────────────
+router.get("/coupons", async (_req, res) => {
+  const coupons = await couponRepo.list();
+  res.json(coupons);
+});
+
+router.post("/coupons", async (req, res) => {
+  const coupon = await couponRepo.create(req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "CREATE_COUPON",
+    targetEntity: "coupon",
+    targetId: coupon.id,
+    newValues: coupon,
+    ipAddress: req.ip,
+  });
+  res.status(201).json(coupon);
+});
+
+router.delete("/coupons/:id", async (req, res) => {
+  await couponRepo.delete(req.params["id"]);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "DELETE_COUPON",
+    targetEntity: "coupon",
+    targetId: req.params["id"],
+    ipAddress: req.ip,
+  });
+  res.json({ success: true });
+});
+
+// ── 12. WHATSAPP TEMPLATES & AUTOMATION (Rule #1) ────────────────────────────
+router.get("/whatsapp/templates", async (_req, res) => {
+  const templates = await whatsappRepo.listTemplates();
+  res.json(templates);
+});
+
+router.patch("/whatsapp/templates/:id", async (req, res) => {
+  const updated = await whatsappRepo.updateTemplate(req.params["id"], req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "UPDATE_WHATSAPP_TEMPLATE",
+    targetEntity: "whatsapp_template",
+    targetId: req.params["id"],
+    newValues: req.body,
+    ipAddress: req.ip,
+  });
+  res.json(updated);
+});
+
+// ── 13. RULES & AUTOMATION ENGINE (Parts 56, 57) ────────────────────────────
+router.get("/rules", async (_req, res) => {
+  const rules = await rulesEngineRepo.listRules();
+  res.json(rules);
+});
+
+router.post("/rules", async (req, res) => {
+  const rule = await rulesEngineRepo.createRule(req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "CREATE_RULE",
+    targetEntity: "rule",
+    targetId: rule.id,
+    newValues: rule,
+    ipAddress: req.ip,
+  });
+  res.status(201).json(rule);
+});
+
+router.delete("/rules/:id", async (req, res) => {
+  await rulesEngineRepo.deleteRule(req.params["id"]);
+  res.json({ success: true });
+});
+
+// ── 14. SUPPORT DESK (Part 61) ───────────────────────────────────────────────
+router.get("/support/tickets", async (req, res) => {
+  const tickets = await supportTicketRepo.list();
+  res.json(tickets);
+});
+
+router.post("/support/tickets", async (req, res) => {
+  const ticket = await supportTicketRepo.create(req.body);
+  res.status(201).json(ticket);
+});
+
+router.patch("/support/tickets/:id/status", async (req, res) => {
+  const { status, resolutionNotes } = req.body;
+  const result = await supportTicketRepo.updateStatus(req.params["id"], status, resolutionNotes);
+  res.json(result);
+});
+
+// ── 15. SYSTEM HEALTH CENTER (Part 95, 96) ───────────────────────────────────
+router.get("/system-health", async (_req, res) => {
+  const health = await systemHealthRepo.getHealthOverview();
+  res.json(health);
+});
+
+// ── 16. DIGITAL TWIN (Parts 16, 17) ──────────────────────────────────────────
+router.get("/digital-twin/floors", async (req, res) => {
+  const libraryId = (req.query["libraryId"] as string) || "lib_1";
+  const floors = await digitalTwinRepo.listFloors(libraryId);
+  res.json(floors);
+});
+
+router.get("/digital-twin/history", async (req, res) => {
+  const libraryId = (req.query["libraryId"] as string) || "lib_1";
+  const datetime = (req.query["datetime"] as string) || new Date().toISOString();
+  const history = await digitalTwinRepo.getHistoricalOccupancy(libraryId, datetime);
+  res.json(history);
+});
+
+// ── 17. USER BUGS & INCIDENT CENTER (Reliability & Bug Management) ─────────
+router.get("/bugs", async (_req, res) => {
+  const bugs = await bugRepo.list();
+  res.json(bugs);
+});
+
+router.patch("/bugs/:id", async (req, res) => {
+  const { status, resolutionNotes } = req.body;
+  const result = await bugRepo.updateStatus(req.params["id"], status, resolutionNotes);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "UPDATE_BUG_STATUS",
+    targetEntity: "bug_report",
+    targetId: req.params["id"],
+    newValues: { status, resolutionNotes },
+    ipAddress: req.ip,
+  });
+  res.json(result);
+});
+
+// ── 18. CRASHES & TELEMETRY MONITORING ───────────────────────────────────────
+router.get("/crashes", async (_req, res) => {
+  const crashes = await crashRepo.list();
+  res.json(crashes);
+});
+
+router.get("/crashes/metrics", async (_req, res) => {
+  const metrics = await crashRepo.getMetrics();
+  res.json(metrics);
+});
+
+// ── 19. INCIDENT MANAGEMENT & AUTOMATION ────────────────────────────────────
+router.get("/incidents", async (_req, res) => {
+  const incidents = await incidentRepo.list();
+  res.json(incidents);
+});
+
+router.post("/incidents", async (req, res) => {
+  const incident = await incidentRepo.create(req.body);
+  await auditLogRepo.record({
+    actorId: "admin_001",
+    actorName: "Master Admin",
+    actorRole: "super_admin",
+    action: "CREATE_INCIDENT",
+    targetEntity: "incident",
+    targetId: incident.id,
+    newValues: incident,
+    ipAddress: req.ip,
+  });
+  res.status(201).json(incident);
+});
+
+router.patch("/incidents/:id", async (req, res) => {
+  const { status, resolution, rootCause } = req.body;
+  const result = await incidentRepo.updateStatus(req.params["id"], status, resolution, rootCause);
+  res.json(result);
+});
+
+// ── 20. NOTIFICATIONS ────────────────────────────────────────────────────────
+router.get("/notifications", async (_req, res) => {
+  res.json([]);
 });
 
 export default router;

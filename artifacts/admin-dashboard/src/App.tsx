@@ -17,6 +17,16 @@ import SuperAdminAttendance from "@/pages/super-admin/Attendance";
 import SuperAdminNotifications from "@/pages/super-admin/Notifications";
 import SuperAdminSettings from "@/pages/super-admin/Settings";
 import ControlPanel from "@/pages/super-admin/ControlPanel";
+import AuditLogs from "@/pages/super-admin/AuditLogs";
+import SecurityDashboard from "@/pages/super-admin/SecurityDashboard";
+import CouponsPage from "@/pages/super-admin/Coupons";
+import WhatsAppCenter from "@/pages/super-admin/WhatsAppCenter";
+import EmergencyBroadcastPage from "@/pages/super-admin/EmergencyBroadcast";
+import RulesBuilderPage from "@/pages/super-admin/RulesBuilder";
+import SystemHealthPage from "@/pages/super-admin/SystemHealth";
+import SupportDeskPage from "@/pages/super-admin/SupportDesk";
+import BugCenterPage from "@/pages/super-admin/BugCenter";
+import AICenterPage from "@/pages/super-admin/AICenter";
 
 import LibraryOwnerLayout from "@/layouts/LibraryOwnerLayout";
 import LibraryOwnerDashboard from "@/pages/library-owner/Dashboard";
@@ -25,6 +35,7 @@ import LibraryOwnerStudents from "@/pages/library-owner/Students";
 import LibraryOwnerAttendance from "@/pages/library-owner/Attendance";
 import LibraryOwnerLeaves from "@/pages/library-owner/Leaves";
 import LibraryOwnerShifts from "@/pages/library-owner/Shifts";
+import DigitalTwinPage from "@/pages/library-owner/DigitalTwin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,11 +92,66 @@ function Router() {
           <ControlPanel />
         </SuperAdminLayout>
       </Route>
+      <Route path="/super-admin/audit-logs">
+        <SuperAdminLayout>
+          <AuditLogs />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/security">
+        <SuperAdminLayout>
+          <SecurityDashboard />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/coupons">
+        <SuperAdminLayout>
+          <CouponsPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/whatsapp">
+        <SuperAdminLayout>
+          <WhatsAppCenter />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/emergency">
+        <SuperAdminLayout>
+          <EmergencyBroadcastPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/rules">
+        <SuperAdminLayout>
+          <RulesBuilderPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/system-health">
+        <SuperAdminLayout>
+          <SystemHealthPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/support">
+        <SuperAdminLayout>
+          <SupportDeskPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/bugs">
+        <SuperAdminLayout>
+          <BugCenterPage />
+        </SuperAdminLayout>
+      </Route>
+      <Route path="/super-admin/ai">
+        <SuperAdminLayout>
+          <AICenterPage />
+        </SuperAdminLayout>
+      </Route>
 
       {/* Library Owner Routes */}
       <Route path="/library-owner">
         <LibraryOwnerLayout>
           <LibraryOwnerDashboard />
+        </LibraryOwnerLayout>
+      </Route>
+      <Route path="/library-owner/digital-twin">
+        <LibraryOwnerLayout>
+          <DigitalTwinPage />
         </LibraryOwnerLayout>
       </Route>
       <Route path="/library-owner/seats">

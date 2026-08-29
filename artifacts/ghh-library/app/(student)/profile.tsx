@@ -14,21 +14,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
+import ReportProblemModal from "@/components/ReportProblemModal";
 
 const MENU_ITEMS = [
   { icon: "book-open-variant", label: "My Library", desc: "GHH Central Library" },
   { icon: "seat", label: "My Seat", desc: "A-12 · Morning Shift" },
   { icon: "calendar-month", label: "Leave History", desc: "View past leaves" },
+  { icon: "bug-outline", label: "Report a Problem", desc: "Report app bug or crash" },
   { icon: "bell-outline", label: "Notifications", desc: "Fee reminders, alerts" },
   { icon: "help-circle-outline", label: "Help & Support", desc: "FAQs, contact us" },
-  { icon: "information-outline", label: "About GHH Library", desc: "Version 1.0.0" },
+  { icon: "information-outline", label: "About GHH Library", desc: "Version 1.0.4" },
 ];
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout, updateUser } = useAuth();
-  const { wallet, streak, achievements } = useData();
+  const { wallet, streak, achievements, libraries } = useData();
+  const [showReportModal, setShowReportModal] = React.useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 84 : insets.bottom + 80;
   const unlocked = achievements.filter(a => a.unlocked).length;
@@ -50,6 +53,9 @@ export default function ProfileScreen() {
         break;
       case "Leave History":
         router.push("/(student)/leave" as any);
+        break;
+      case "Report a Problem":
+        setShowReportModal(true);
         break;
       case "Notifications":
         Alert.alert("Notifications", "You have no unread notifications.");
@@ -206,6 +212,15 @@ export default function ProfileScreen() {
           Sign Out
         </Text>
       </Pressable>
+
+      <ReportProblemModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        userId={user?.id}
+        userName={user?.name}
+        libraryId={libraries[0]?.id}
+        screenName="Profile"
+      />
     </ScrollView>
   );
 }

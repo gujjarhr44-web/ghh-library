@@ -12,7 +12,8 @@ import {
   LogOut,
   Sun,
   Moon,
-  Menu
+  Menu,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -36,7 +37,8 @@ export default function LibraryOwnerLayout({ children }: { children: React.React
   // Dynamic nav items (leaves/shifts can be hidden via CMS)
   const NAV_ITEMS = [
     { href: "/library-owner", label: homeLabel, icon: LayoutDashboard, show: true },
-    { href: "/library-owner/seats", label: "Seats", icon: Grid3x3, show: true },
+    { href: "/library-owner/digital-twin", label: "Digital Twin", icon: Layers, show: true },
+    { href: "/library-owner/seats", label: "Seats Matrix", icon: Grid3x3, show: true },
     { href: "/library-owner/students", label: studentsLabel, icon: Users, show: true },
     { href: "/library-owner/attendance", label: attendanceLabel, icon: Calendar, show: true },
     { href: "/library-owner/leaves", label: "Leaves", icon: FileCheck, show: showLeaves },

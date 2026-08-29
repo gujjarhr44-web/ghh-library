@@ -1,3 +1,8 @@
 const { getDefaultConfig } = require("expo/metro-config");
 
-module.exports = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
+
+// Multi-core parallel JS bundling for faster Metro build speeds
+config.maxWorkers = 4;
+
+module.exports = config;

@@ -1,12 +1,13 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
-import type { Library } from "@/context/DataContext";
+import { useData, type Library } from "@/context/DataContext";
 
 interface LibraryCardProps {
   library: Library;
+  distanceKm?: number;
 }
 
 const FACILITY_ICONS: Record<string, string> = {
@@ -20,8 +21,10 @@ const FACILITY_ICONS: Record<string, string> = {
   Locker: "lock",
 };
 
-export function LibraryCard({ library }: LibraryCardProps) {
+export function LibraryCard({ library, distanceKm }: LibraryCardProps) {
   const colors = useColors();
+  const { openDirections } = useData();
+
   const occupancyColor =
     library.occupancyRate > 80 ? colors.destructive :
     library.occupancyRate > 60 ? colors.primary :
@@ -47,8 +50,14 @@ export function LibraryCard({ library }: LibraryCardProps) {
         {library.isVerified && (
           <View style={[styles.verifiedBadge, { backgroundColor: colors.card }]}>
             <MaterialCommunityIcons name="check-decagram" size={14} color={colors.info} />
+            <Text style={[styles.verifiedText, { color: colors.info }]}>GHH Verified</Text>
           </View>
         )}
+        <View style={[styles.billingBadge, { backgroundColor: library.billingMode === "membership" ? colors.secondary : colors.primary }]}>
+          <Text style={styles.billingBadgeText}>
+            {library.billingMode === "membership" ? "Fixed Membership" : "Credit-Based"}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -57,9 +66,21 @@ export function LibraryCard({ library }: LibraryCardProps) {
             {library.name}
           </Text>
         </View>
-        <Text style={[styles.area, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-          {library.area}, {library.city}
-        </Text>
+
+        <View style={styles.locationRow}>
+          <Text style={[styles.area, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+            {library.area}, {library.city}
+          </Text>
+          {distanceKm !== undefined && (
+            <View style={[styles.distBadge, { backgroundColor: colors.primary + "15" }]}>
+              <MaterialCommunityIcons name="map-marker-distance" size={12} color={colors.primary} />
+              <Text style={[styles.distText, { color: colors.primary, fontFamily: "Poppins_500Medium" }]}>
+                {distanceKm} km
+              </Text>
+            </View>
+          )}
+        </View>
+
         <View style={styles.ratingRow}>
           <Feather name="star" size={12} color={colors.primary} />
           <Text style={[styles.ratingText, { color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>
@@ -93,17 +114,20 @@ export function LibraryCard({ library }: LibraryCardProps) {
                 </Text>
               </View>
             ))}
-            {library.facilities.length > 3 && (
-              <View style={[styles.facilityChip, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.facilityText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-                  +{library.facilities.length - 3}
-                </Text>
-              </View>
-            )}
           </View>
-          <Text style={[styles.planPrice, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
-            ₹{Math.min(...library.plans.map(p => p.price))}
-          </Text>
+
+          <TouchableOpacity
+            style={[styles.directionBtn, { borderColor: colors.border }]}
+            onPress={(e) => {
+              e.stopPropagation();
+              openDirections(library);
+            }}
+          >
+            <MaterialCommunityIcons name="directions" size={14} color={colors.primary} />
+            <Text style={[styles.directionText, { color: colors.primary, fontFamily: "Poppins_500Medium" }]}>
+              Directions
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Pressable>
@@ -114,12 +138,13 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 14,
     overflow: "hidden",
+    marginBottom: 16,
   },
   imageWrapper: {
-    position: "relative",
     height: 140,
+    width: "100%",
+    position: "relative",
   },
   image: {
     width: "100%",
@@ -129,94 +154,136 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   imageBadgeText: {
     color: "#fff",
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
   },
   verifiedBadge: {
     position: "absolute",
     top: 10,
     right: 10,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifiedText: {
+    fontSize: 9,
+    fontFamily: "Poppins_600SemiBold",
+  },
+  billingBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  billingBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
   },
   body: {
     padding: 14,
-    gap: 4,
   },
   titleRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
   name: {
     fontSize: 15,
-    flex: 1,
+  },
+  locationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 2,
   },
   area: {
     fontSize: 12,
-    marginTop: -2,
+  },
+  distBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  distText: {
+    fontSize: 11,
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginTop: 4,
+    marginTop: 6,
+    gap: 4,
   },
   ratingText: {
     fontSize: 12,
   },
   dot: {
     fontSize: 12,
+    marginHorizontal: 2,
   },
   seatsText: {
     fontSize: 12,
   },
   progressBar: {
-    height: 5,
-    borderRadius: 3,
+    height: 4,
+    borderRadius: 2,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 2,
   },
   occupancy: {
-    fontSize: 11,
+    fontSize: 10,
+    marginTop: 3,
     textAlign: "right",
-    marginTop: 2,
   },
   bottomRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 6,
+    alignItems: "center",
+    marginTop: 10,
   },
   facilities: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 5,
+    gap: 6,
     flex: 1,
   },
   facilityChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 20,
+    borderRadius: 5,
   },
   facilityText: {
-    fontSize: 11,
+    fontSize: 10,
   },
-  planPrice: {
-    fontSize: 17,
+  directionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  directionText: {
+    fontSize: 11,
   },
 });

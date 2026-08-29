@@ -3,6 +3,16 @@
     "version": ">= 16.0.0"
   },
   "build": {
+    "fast-apk": {
+      "distribution": "internal",
+      "cache": {
+        "key": "fast-apk-v1"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {

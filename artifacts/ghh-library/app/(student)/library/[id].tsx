@@ -12,10 +12,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SeatGrid } from "@/components/SeatGrid";
-import { useData, type Seat } from "@/context/DataContext";
+import { useData, type Seat, type Plan } from "@/context/DataContext";
 import { useColors } from "@/hooks/useColors";
 
 const FACILITY_ICONS: Record<string, string> = {
@@ -29,341 +30,576 @@ const FACILITY_ICONS: Record<string, string> = {
   Locker: "lock",
 };
 
+const DATES = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() + i);
+  return {
+    label: i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short" }),
+    date: d.toISOString().split("T")[0],
+    day: d.getDate(),
+  };
+});
+
 export default function LibraryDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getLibrary, seats, settings } = useData();
+  const { getLibrary, seats, settings, reserveSeat, joinWaitlist, openDirections, buyPlan } = useData();
   const library = getLibrary(id ?? "");
 
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
-  const [selectedShift, setSelectedShift] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [tab, setTab] = useState<"seats" | "plans">("seats");
+  const [selectedShift, setSelectedShift] = useState<string>("s1");
+  const [selectedDate, setSelectedDate] = useState<string>(DATES[0].date);
+  const [tab, setTab] = useState<"seats" | "plans" | "branches">("seats");
+  const [bookingSuccessModal, setBookingSuccessModal] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState("");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom + 24;
 
-  if (!library) return (
-    <View style={[styles.noLib, { backgroundColor: colors.background }]}>
-      <MaterialCommunityIcons name="alert-circle" size={40} color={colors.destructive} />
-      <Text style={[{ color: colors.foreground, fontFamily: "Poppins_500Medium", fontSize: 16 }]}>Library not found</Text>
-      <Pressable onPress={() => router.back()}>
-        <Text style={[{ color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>Go Back</Text>
-      </Pressable>
-    </View>
-  );
+  if (!library) {
+    return (
+      <View style={[styles.noLib, { backgroundColor: colors.background }]}>
+        <MaterialCommunityIcons name="alert-circle" size={40} color={colors.destructive} />
+        <Text style={[{ color: colors.foreground, fontFamily: "Poppins_500Medium", fontSize: 16 }]}>Library not found</Text>
+        <Pressable onPress={() => router.back()}>
+          <Text style={[{ color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
-  const handleBookSeat = () => {
+  const currentShiftObj = library.shifts.find((s) => s.id === selectedShift) || library.shifts[0];
+
+  const handleBookSeat = async () => {
     if (!settings.isBookSeatClickable) {
       Alert.alert("Feature Disabled", "Seat reservation is disabled by the admin.");
       return;
     }
-    if (!selectedSeat) { Alert.alert("Select a Seat", "Tap on an available seat to select it."); return; }
-    if (!selectedShift) { Alert.alert("Select Shift", "Please select a time shift."); return; }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(
-      "Seat Reserved!",
-      `Seat ${selectedSeat.number} for ${selectedShift} shift has been reserved successfully.`,
-      [{ text: "OK", onPress: () => router.back() }],
+    if (!selectedSeat) {
+      Alert.alert("Select a Seat", "Please tap on an available seat in the grid below.");
+      return;
+    }
+
+    const res = await reserveSeat(
+      selectedSeat.id,
+      selectedSeat.number,
+      selectedShift,
+      currentShiftObj?.name || "Morning",
+      selectedDate,
+      currentShiftObj?.startTime || "06:00 AM"
     );
+
+    if (res.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setBookingMessage(res.message);
+      setBookingSuccessModal(true);
+    } else {
+      Alert.alert("Seat Unavailable", res.message);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    const res = await joinWaitlist(selectedShift, currentShiftObj?.name || "Morning", selectedDate);
+    if (res.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        "Waitlist Joined! 🎉",
+        `You are #${res.position} in the queue for ${selectedDate} (${currentShiftObj?.name}). You will receive an instant notification when a seat opens up.`
+      );
+    }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.headerBar, { paddingTop: topPad + 8, paddingHorizontal: 20, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()}>
+      {/* Header Bar */}
+      <View style={[styles.headerBar, { paddingTop: topPad + 8, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
-          Library Details
+        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]} numberOfLines={1}>
+          {library.name}
         </Text>
-        <Pressable>
-          <MaterialCommunityIcons name="heart-outline" size={22} color={colors.foreground} />
-        </Pressable>
+        <TouchableOpacity onPress={() => openDirections(library)} style={styles.headerBtn}>
+          <MaterialCommunityIcons name="directions" size={22} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
+        {/* Hero Image */}
         <View style={styles.heroImageWrapper}>
-          <Image
-            source={{ uri: library.image }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-          <View style={styles.heroOverlay} />
-          <View style={[styles.openBadge, { backgroundColor: library.isOpen ? colors.success : colors.destructive }]}>
-            <Text style={styles.openBadgeText}>{library.isOpen ? `Open · until ${library.closeTime}` : "Closed"}</Text>
-          </View>
-        </View>
-
-        <View style={[styles.heroSection, { paddingHorizontal: 20, paddingTop: 16 }]}>
-          <View style={styles.heroInfo}>
-            <View style={styles.titleRow}>
-              <Text style={[styles.libName, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
-                {library.name}
-              </Text>
-              {library.isVerified && (
-                <MaterialCommunityIcons name="check-decagram" size={18} color={colors.info} />
-              )}
-            </View>
-            <Text style={[styles.libAddress, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-              {library.address}
+          <Image source={{ uri: library.image }} style={styles.heroImage} resizeMode="cover" />
+          <View style={[styles.billingTag, { backgroundColor: library.billingMode === "membership" ? colors.secondary : colors.primary }]}>
+            <Text style={styles.billingTagText}>
+              {library.billingMode === "membership" ? "Fixed Membership Model" : "1 Credit = 1 Day/Shift Access"}
             </Text>
-            <View style={styles.metaRow}>
-              <MaterialCommunityIcons name="star" size={14} color={colors.primary} />
-              <Text style={[styles.ratingText, { color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>
-                {library.rating}
-              </Text>
-              <Text style={[styles.dot, { color: colors.border }]}>•</Text>
-              <MaterialCommunityIcons name="account" size={13} color={colors.mutedForeground} />
-              <Text style={[styles.openText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-                {library.ownerName}
-              </Text>
-            </View>
           </View>
         </View>
 
-        <View style={[styles.seatsRow, { marginHorizontal: 20, marginTop: 16, gap: 10 }]}>
-          {[
-            { label: "Total Seats", value: library.totalSeats, color: colors.info },
-            { label: "Available", value: library.availableSeats, color: colors.success },
-            { label: "Occupied", value: library.totalSeats - library.availableSeats, color: colors.destructive },
-          ].map(s => (
-            <View key={s.label} style={[styles.seatStatBox, { backgroundColor: colors.card, borderColor: colors.border, flex: 1 }]}>
-              <Text style={[styles.seatStatVal, { color: s.color, fontFamily: "Poppins_700Bold" }]}>
-                {s.value}
-              </Text>
-              <Text style={[styles.seatStatLabel, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-                {s.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {settings.showFacilities && (
-          <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginBottom: 10 }]}>
-              Facilities
+        {/* Library Info */}
+        <View style={styles.infoSection}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.libraryName, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
+              {library.name}
             </Text>
-            <View style={styles.facilityGrid}>
-              {library.facilities.map(f => (
-                <View key={f} style={[styles.facilityItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <MaterialCommunityIcons name={FACILITY_ICONS[f] as any ?? "check"} size={18} color={colors.primary} />
-                  <Text style={[styles.facilityLabel, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
-                    {f}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            {library.isVerified && (
+              <View style={[styles.verifiedPill, { backgroundColor: colors.info + "15" }]}>
+                <MaterialCommunityIcons name="check-decagram" size={14} color={colors.info} />
+                <Text style={[styles.verifiedPillText, { color: colors.info }]}>Verified</Text>
+              </View>
+            )}
           </View>
-        )}
 
-        <View style={[styles.tabToggle, { marginHorizontal: 20, marginTop: 20, backgroundColor: colors.muted }]}>
-          {(["seats", "plans"] as const).map(t => (
-            <Pressable
-              key={t}
-              style={[styles.tabBtn, { backgroundColor: tab === t ? colors.primary : "transparent" }]}
-              onPress={() => setTab(t)}
+          {/* Box-Based Unique Library ID (PIN + Code) */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, marginBottom: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.primary + "15", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: colors.primary + "30" }}>
+              <Text style={{ fontSize: 11, fontFamily: "Poppins_700Bold", color: colors.primary }}>
+                {(library as any).pincode || "127306"}
+              </Text>
+              <Text style={{ fontSize: 11, fontFamily: "Poppins_700Bold", color: colors.mutedForeground }}>-</Text>
+              <Text style={{ fontSize: 11, fontFamily: "Poppins_700Bold", color: colors.foreground }}>
+                {(library as any).libraryCode || library.id.slice(0, 6).toUpperCase()}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}
+              onPress={() => Alert.alert("Copied! 📋", `Library ID: ${(library as any).pincode || "127306"}-${(library as any).libraryCode || library.id.slice(0, 6).toUpperCase()} copied.`)}
             >
-              <Text style={[styles.tabBtnText, {
-                color: tab === t ? "#fff" : colors.mutedForeground,
-                fontFamily: "Poppins_600SemiBold",
-              }]}>
-                {t === "seats" ? "Seat Map" : "Plans"}
+              <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Poppins_500Medium" }}>Copy ID</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.addressText, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+            📍 {library.address}, {library.city}
+          </Text>
+
+          {/* Quick Metrics */}
+          <View style={[styles.metricsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricVal, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
+                ⭐ {library.rating}
+              </Text>
+              <Text style={[styles.metricLbl, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>Rating</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricVal, { color: colors.success, fontFamily: "Poppins_700Bold" }]}>
+                {library.availableSeats}
+              </Text>
+              <Text style={[styles.metricLbl, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>Available</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricVal, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
+                {library.totalSeats}
+              </Text>
+              <Text style={[styles.metricLbl, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>Total Seats</Text>
+            </View>
+          </View>
+
+          {/* Navigation Link Button */}
+          <TouchableOpacity
+            style={[styles.directionsButton, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}
+            onPress={() => openDirections(library)}
+          >
+            <MaterialCommunityIcons name="google-maps" size={18} color={colors.primary} />
+            <Text style={[styles.directionsButtonText, { color: colors.primary, fontFamily: "Poppins_600SemiBold" }]}>
+              Get Directions on Google Maps
+            </Text>
+          </TouchableOpacity>
+
+          {/* Tabs */}
+          <View style={[styles.tabRow, { backgroundColor: colors.muted }]}>
+            <Pressable
+              style={[styles.tabBtn, tab === "seats" && { backgroundColor: colors.card }]}
+              onPress={() => setTab("seats")}
+            >
+              <Text style={[styles.tabText, { color: tab === "seats" ? colors.foreground : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+                Reserve Seat
               </Text>
             </Pressable>
-          ))}
-        </View>
-
-        {tab === "seats" ? (
-          <View style={{ paddingHorizontal: 20, marginTop: 16, gap: 16 }}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginBottom: 10 }]}>
-                Select Shift
+            <Pressable
+              style={[styles.tabBtn, tab === "plans" && { backgroundColor: colors.card }]}
+              onPress={() => setTab("plans")}
+            >
+              <Text style={[styles.tabText, { color: tab === "plans" ? colors.foreground : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+                Plans & Fees
               </Text>
-              <View style={styles.shiftRow}>
-                {library.shifts.map(s => (
+            </Pressable>
+            {library.branches && library.branches.length > 0 && (
+              <Pressable
+                style={[styles.tabBtn, tab === "branches" && { backgroundColor: colors.card }]}
+                onPress={() => setTab("branches")}
+              >
+                <Text style={[styles.tabText, { color: tab === "branches" ? colors.foreground : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
+                  Branches ({library.branches.length})
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* TAB 1: SEAT RESERVATION */}
+          {tab === "seats" && (
+            <View style={{ marginTop: 16 }}>
+              {/* Date Selector */}
+              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+                1. Select Booking Date
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
+                {DATES.map((d) => (
                   <Pressable
-                    key={s.id}
+                    key={d.date}
                     style={[
-                      styles.shiftChip,
+                      styles.dateChip,
                       {
-                        backgroundColor: selectedShift === s.name ? colors.primary : colors.card,
-                        borderColor: selectedShift === s.name ? colors.primary : colors.border,
+                        backgroundColor: selectedDate === d.date ? colors.primary : colors.card,
+                        borderColor: selectedDate === d.date ? colors.primary : colors.border,
                       },
                     ]}
-                    onPress={() => setSelectedShift(s.name)}
+                    onPress={() => setSelectedDate(d.date)}
                   >
-                    <Text style={[styles.shiftName, {
-                      color: selectedShift === s.name ? "#fff" : colors.foreground,
-                      fontFamily: "Poppins_600SemiBold",
-                    }]}>
-                      {s.name}
+                    <Text style={[styles.dateChipLabel, { color: selectedDate === d.date ? "#fff" : colors.mutedForeground }]}>
+                      {d.label}
                     </Text>
-                    <Text style={[styles.shiftTime, {
-                      color: selectedShift === s.name ? "#fff9" : colors.mutedForeground,
-                      fontFamily: "Poppins_400Regular",
-                    }]}>
-                      {s.startTime}–{s.endTime}
+                    <Text style={[styles.dateChipDay, { color: selectedDate === d.date ? "#fff" : colors.foreground, fontFamily: "Poppins_700Bold" }]}>
+                      {d.day}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Shift Selector */}
+              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginTop: 16 }]}>
+                2. Select Study Shift
+              </Text>
+              <View style={styles.shiftsGrid}>
+                {library.shifts.map((shift) => (
+                  <Pressable
+                    key={shift.id}
+                    style={[
+                      styles.shiftCard,
+                      {
+                        backgroundColor: selectedShift === shift.id ? colors.primary + "15" : colors.card,
+                        borderColor: selectedShift === shift.id ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setSelectedShift(shift.id)}
+                  >
+                    <Text style={[styles.shiftName, { color: selectedShift === shift.id ? colors.primary : colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+                      {shift.name}
+                    </Text>
+                    <Text style={[styles.shiftTime, { color: colors.mutedForeground }]}>
+                      {shift.startTime} - {shift.endTime}
                     </Text>
                   </Pressable>
                 ))}
               </View>
-            </View>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginBottom: 10 }]}>
-                Select Seat
+
+              {/* Interactive 2D Seat Grid */}
+              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold", marginTop: 16 }]}>
+                3. Choose Your Seat
               </Text>
               <SeatGrid
-                seats={seats.slice(0, 30)}
-                selectable
-                onSelect={setSelectedSeat}
-                selectedId={selectedSeat?.id}
+                seats={seats}
+                selectedSeatId={selectedSeat?.id ?? null}
+                onSelectSeat={setSelectedSeat}
               />
-            </View>
 
-            {selectedSeat && (
-              <View style={[styles.selectedInfo, { backgroundColor: colors.primary + "15", borderColor: colors.primary }]}>
-                <MaterialCommunityIcons name="seat" size={20} color={colors.primary} />
-                <Text style={[styles.selectedText, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
-                  Seat <Text style={{ color: colors.primary, fontFamily: "Poppins_700Bold" }}>{selectedSeat.number}</Text> selected
-                  {selectedShift ? ` · ${selectedShift}` : ""}
-                </Text>
+              {/* Booking & Waitlist Actions */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.bookBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleBookSeat}
+                >
+                  <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" />
+                  <Text style={[styles.bookBtnText, { color: "#fff", fontFamily: "Poppins_600SemiBold" }]}>
+                    Reserve Seat {selectedSeat ? `(${selectedSeat.number})` : ""}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.waitlistBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                  onPress={handleJoinWaitlist}
+                >
+                  <MaterialCommunityIcons name="account-clock" size={18} color={colors.primary} />
+                  <Text style={[styles.waitlistBtnText, { color: colors.foreground, fontFamily: "Poppins_500Medium" }]}>
+                    Join Waitlist
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          )}
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.bookBtn,
-                { 
-                  backgroundColor: !settings.isBookSeatClickable ? colors.border : colors.primary, 
-                  opacity: pressed && settings.isBookSeatClickable ? 0.85 : 1 
-                },
-              ]}
-              onPress={handleBookSeat}
-              disabled={!settings.isBookSeatClickable}
-            >
-              <MaterialCommunityIcons name="check-circle" size={20} color={settings.isBookSeatClickable ? "#fff" : colors.mutedForeground} />
-              <Text style={[styles.bookBtnText, { color: settings.isBookSeatClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
-                {!settings.isBookSeatClickable ? "Seat Booking Disabled" : "Reserve Seat"}
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: 20, marginTop: 16, gap: 12 }}>
-            {library.plans.map(plan => (
-              <Pressable
-                key={plan.id}
-                style={[
-                  styles.planCard,
-                  {
-                    backgroundColor: plan.popular ? colors.primary + "15" : colors.card,
-                    borderColor: selectedPlan === plan.id ? colors.primary : plan.popular ? colors.primary + "60" : colors.border,
-                    borderWidth: selectedPlan === plan.id ? 2 : 1,
-                  },
-                ]}
-                onPress={() => setSelectedPlan(plan.id)}
-              >
-                {plan.popular && (
-                  <View style={[styles.popularTag, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.popularTagText, { fontFamily: "Poppins_600SemiBold" }]}>POPULAR</Text>
-                  </View>
-                )}
-                <View style={styles.planRow}>
-                  <View>
-                    <Text style={[styles.planCredits, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
-                      {plan.credits} Credits
-                    </Text>
-                    <Text style={[styles.planValidity, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-                      Valid {plan.validity} days
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
+          {/* TAB 2: PLANS & BILLING */}
+          {tab === "plans" && (
+            <View style={{ marginTop: 16 }}>
+              {library.plans.map((plan: Plan) => (
+                <View
+                  key={plan.id}
+                  style={[styles.planCard, { backgroundColor: colors.card, borderColor: plan.popular ? colors.primary : colors.border }]}
+                >
+                  {plan.popular && (
+                    <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.popularBadgeText}>POPULAR</Text>
+                    </View>
+                  )}
+                  <View style={styles.planTop}>
+                    <View>
+                      <Text style={[styles.planTitle, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+                        {plan.name || `${plan.credits} Credits Pack`}
+                      </Text>
+                      <Text style={[styles.planValidity, { color: colors.mutedForeground }]}>
+                        {plan.billingMode === "membership" ? `Unlimited access for ${plan.validity} days` : `${plan.credits} Credits • Valid for ${plan.validity} days`}
+                      </Text>
+                    </View>
                     <Text style={[styles.planPrice, { color: colors.primary, fontFamily: "Poppins_700Bold" }]}>
                       ₹{plan.price}
                     </Text>
-                    <Text style={[styles.perCredit, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
-                      ₹{Math.round(plan.price / plan.credits)}/credit
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.planSelectBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => {
+                      buyPlan(plan.credits, plan.name || `${plan.credits} Credits`, plan.validity, plan.billingMode || "credit");
+                      Alert.alert("Plan Activated! 🎉", `${plan.name || plan.credits + " Credits"} has been added to your wallet.`);
+                    }}
+                  >
+                    <Text style={[styles.planSelectBtnText, { color: "#fff", fontFamily: "Poppins_600SemiBold" }]}>
+                      Select & Pay
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* TAB 3: MULTI-BRANCH LOCATIONS */}
+          {tab === "branches" && library.branches && (
+            <View style={{ marginTop: 16 }}>
+              {library.branches.map((b) => (
+                <View key={b.id} style={[styles.branchCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons name="office-building-marker" size={24} color={colors.primary} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.branchName, { color: colors.foreground, fontFamily: "Poppins_600SemiBold" }]}>
+                      {b.name}
+                    </Text>
+                    <Text style={[styles.branchAddress, { color: colors.mutedForeground }]}>
+                      {b.address}, {b.city}
+                    </Text>
+                    <Text style={[styles.branchSeats, { color: colors.success }]}>
+                      {b.totalSeats} Total Seats
                     </Text>
                   </View>
                 </View>
-              </Pressable>
-            ))}
-            <Pressable
-              style={({ pressed }) => [
-                styles.bookBtn,
-                { 
-                  backgroundColor: !settings.isPurchasePlanClickable ? colors.border : colors.primary, 
-                  opacity: pressed && settings.isPurchasePlanClickable ? 0.85 : 1, 
-                  marginTop: 4 
-                },
-              ]}
-              onPress={() => {
-                if (!settings.isPurchasePlanClickable) {
-                  Alert.alert("Feature Disabled", "Purchasing plans is disabled by the admin.");
-                  return;
-                }
-                Alert.alert("Payment", "Payment gateway integration coming soon!");
-              }}
-              disabled={!settings.isPurchasePlanClickable}
-            >
-              <MaterialCommunityIcons name="credit-card" size={20} color={settings.isPurchasePlanClickable ? "#fff" : colors.mutedForeground} />
-              <Text style={[styles.bookBtnText, { color: settings.isPurchasePlanClickable ? "#fff" : colors.mutedForeground, fontFamily: "Poppins_600SemiBold" }]}>
-                {!settings.isPurchasePlanClickable ? "Plan Purchase Disabled" : "Buy Credits"}
-              </Text>
-            </Pressable>
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Booking Success Modal */}
+      <Modal visible={bookingSuccessModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <MaterialCommunityIcons name="check-circle" size={54} color={colors.success} />
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Poppins_700Bold" }]}>
+              Booking Confirmed!
+            </Text>
+            <Text style={[styles.modalMessage, { color: colors.mutedForeground, fontFamily: "Poppins_400Regular" }]}>
+              {bookingMessage}
+            </Text>
+            <Text style={[styles.noShowNotice, { color: colors.warning }]}>
+              ⏰ No-Show Policy: Please arrive within 30 minutes of shift start to keep your seat reserved.
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setBookingSuccessModal(false)}
+            >
+              <Text style={[styles.modalBtnText, { color: "#fff", fontFamily: "Poppins_600SemiBold" }]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  noLib: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  headerBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 17 },
-  heroImageWrapper: { position: "relative", height: 200, width: "100%" },
+  noLib: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  headerBtn: { padding: 4 },
+  headerTitle: { fontSize: 16, flex: 1, marginHorizontal: 12 },
+  heroImageWrapper: { width: "100%", height: 200, position: "relative" },
   heroImage: { width: "100%", height: "100%" },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.15)" },
-  openBadge: { position: "absolute", bottom: 12, left: 12, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
-  openBadgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  heroSection: { gap: 4 },
-  heroInfo: { gap: 4 },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  libName: { fontSize: 17, flex: 1 },
-  libAddress: { fontSize: 13 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  ratingText: { fontSize: 13 },
-  dot: { fontSize: 12 },
-  openDot: { width: 6, height: 6, borderRadius: 3 },
-  openText: { fontSize: 12 },
-  seatsRow: { flexDirection: "row" },
-  seatStatBox: { borderRadius: 12, padding: 12, alignItems: "center", gap: 4, borderWidth: 1 },
-  seatStatVal: { fontSize: 22 },
-  seatStatLabel: { fontSize: 11 },
-  sectionTitle: { fontSize: 16 },
-  facilityGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  facilityItem: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
-  facilityLabel: { fontSize: 13 },
-  tabToggle: { flexDirection: "row", borderRadius: 14, padding: 4, gap: 4 },
-  tabBtn: { flex: 1, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  tabBtnText: { fontSize: 14 },
-  shiftRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  shiftChip: { borderRadius: 12, padding: 10, borderWidth: 1, minWidth: 100 },
-  shiftName: { fontSize: 14 },
-  shiftTime: { fontSize: 11, marginTop: 2 },
-  selectedInfo: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 12, borderWidth: 1 },
-  selectedText: { fontSize: 14, flex: 1 },
-  bookBtn: { height: 52, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  bookBtnText: { fontSize: 16, color: "#fff" },
-  planCard: { borderRadius: 16, padding: 16, overflow: "hidden" },
-  popularTag: { position: "absolute", top: 0, right: 0, paddingHorizontal: 10, paddingVertical: 4, borderBottomLeftRadius: 10 },
-  popularTagText: { fontSize: 10, color: "#fff" },
-  planRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  planCredits: { fontSize: 18 },
-  planValidity: { fontSize: 12, marginTop: 2 },
-  planPrice: { fontSize: 22 },
-  perCredit: { fontSize: 11 },
+  billingTag: {
+    position: "absolute",
+    bottom: 12,
+    left: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  billingTagText: { color: "#fff", fontSize: 11, fontFamily: "Poppins_600SemiBold" },
+  infoSection: { padding: 16 },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  libraryName: { fontSize: 20, flex: 1 },
+  verifiedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verifiedPillText: { fontSize: 11, fontFamily: "Poppins_600SemiBold" },
+  addressText: { fontSize: 12, marginTop: 4 },
+  metricsCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+  },
+  metricItem: { alignItems: "center" },
+  metricVal: { fontSize: 16 },
+  metricLbl: { fontSize: 11 },
+  metricDivider: { width: 1, height: 24, backgroundColor: "#fff2" },
+  directionsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 12,
+  },
+  directionsButtonText: { fontSize: 13 },
+  tabRow: {
+    flexDirection: "row",
+    borderRadius: 10,
+    padding: 4,
+    marginTop: 16,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  tabText: { fontSize: 12 },
+  sectionTitle: { fontSize: 13, marginBottom: 8 },
+  dateScroll: { flexDirection: "row", marginBottom: 8 },
+  dateChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 8,
+    alignItems: "center",
+  },
+  dateChipLabel: { fontSize: 10 },
+  dateChipDay: { fontSize: 14 },
+  shiftsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  shiftCard: {
+    width: "48%",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  shiftName: { fontSize: 12 },
+  shiftTime: { fontSize: 10, marginTop: 2 },
+  actionRow: { marginTop: 16, gap: 10 },
+  bookBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  bookBtnText: { fontSize: 14 },
+  waitlistBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  waitlistBtnText: { fontSize: 13 },
+  planCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    position: "relative",
+  },
+  popularBadge: {
+    position: "absolute",
+    top: -8,
+    right: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  popularBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Poppins_700Bold" },
+  planTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  planTitle: { fontSize: 14 },
+  planValidity: { fontSize: 11, marginTop: 2 },
+  planPrice: { fontSize: 18 },
+  planSelectBtn: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  planSelectBtnText: { fontSize: 13 },
+  branchCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  branchName: { fontSize: 14 },
+  branchAddress: { fontSize: 11, marginTop: 2 },
+  branchSeats: { fontSize: 11, marginTop: 2 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalBox: {
+    width: "100%",
+    maxWidth: 340,
+    padding: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  modalTitle: { fontSize: 18, marginTop: 12 },
+  modalMessage: { fontSize: 13, textAlign: "center", marginTop: 8 },
+  noShowNotice: { fontSize: 11, textAlign: "center", marginTop: 12, lineHeight: 16 },
+  modalBtn: {
+    width: "100%",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 18,
+  },
+  modalBtnText: { fontSize: 14 },
 });

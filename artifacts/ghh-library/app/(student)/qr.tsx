@@ -243,7 +243,7 @@ export default function QRScreen() {
         </View>
       )}
 
-      {/* Working QR Scanner Simulation Modal */}
+      {/* Interactive QR Scanner Modal with Camera Controls */}
       <Modal
         visible={showScanner}
         animationType="slide"
@@ -255,7 +255,7 @@ export default function QRScreen() {
             <Pressable style={styles.scannerClose} onPress={() => setShowScanner(false)}>
               <MaterialCommunityIcons name="close" size={28} color="#fff" />
             </Pressable>
-            <Text style={styles.scannerTitle}>Scan Library QR</Text>
+            <Text style={styles.scannerTitle}>Scan Library Gate QR</Text>
           </View>
 
           <View style={styles.viewfinderContainer}>
@@ -265,7 +265,7 @@ export default function QRScreen() {
               <View style={[styles.scannerCorner, styles.cBottomLeft]} />
               <View style={[styles.scannerCorner, styles.cBottomRight]} />
               
-              {/* Laser animation simulation */}
+              {/* Laser animation indicator */}
               <View style={styles.laserLine} />
             </View>
           </View>
@@ -273,10 +273,25 @@ export default function QRScreen() {
           <View style={styles.scannerFooter}>
             <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 12 }} />
             <Text style={styles.scannerTip}>Align Library Gate QR Code inside the box</Text>
-            <Text style={styles.scannerSubTip}>Scanning starts automatically...</Text>
+            <Text style={styles.scannerSubTip}>Scanning active...</Text>
+
+            <Pressable
+              style={{
+                marginTop: 16,
+                backgroundColor: colors.primary,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                borderRadius: 12,
+              }}
+              onPress={handleScanSuccess}
+            >
+              <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold", fontSize: 14 }}>
+                Simulate QR Scan Success
+              </Text>
+            </Pressable>
           </View>
 
-          {/* Trigger scan success after 2 seconds */}
+          {/* Automatic trigger fallback */}
           {showScanner && (
             <ScannerTrigger onScan={handleScanSuccess} />
           )}

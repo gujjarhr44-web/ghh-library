@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "209084121811",
+    "project_id": "ghh-library",
+    "storage_bucket": "ghh-library.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209084121811:android:3a9ecd6f404d8b8932ca26",
+        "android_client_info": {
+          "package_name": "com.ghh.library"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCH2k4odmN2ezy35OV_Nt6tjg0AKwOZxEA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

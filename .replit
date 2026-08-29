@@ -1,8 +1,11 @@
 modules = ["nodejs-24"]
+run = "PORT=8080 pnpm run replit:build && PORT=8080 pnpm run replit:start"
 
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+build = "pnpm install --no-frozen-lockfile && pnpm run replit:build"
+run = "pnpm run replit:start"
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
