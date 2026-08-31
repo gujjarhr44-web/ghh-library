@@ -4,9 +4,46 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-export const pool = process.env.DATABASE_URL
-  ? new Pool({ connectionString: process.env.DATABASE_URL })
-  : null;
+const rawDbUrl = process.env.DATABASE_URL;
+
+function createPool(): pg.Pool | null {
+  if (!rawDbUrl) return null;
+
+  const isSupabase =
+    rawDbUrl.includes("supabase.co") ||
+    rawDbUrl.includes("pooler.supabase.com") ||
+    rawDbUrl.includes("sslmode=require") ||
+    process.env.NODE_ENV === "production";
+
+  // When connecting to Supabase via node-postgres, passing ?sslmode=require in the URI
+  // makes pg-connection-string override ssl options and reject Supabase intermediate certs.
+  // Stripping sslmode parameter allows the explicit ssl: { rejectUnauthorized: false } to handle SSL smoothly.
+  let connectionString = rawDbUrl;
+  try {
+    const parsed = new URL(rawDbUrl);
+    parsed.searchParams.delete("sslmode");
+    parsed.searchParams.delete("ssl");
+    connectionString = parsed.toString();
+  } catch {
+    // Fallback if URL parsing fails
+  }
+
+  const p = new Pool({
+    connectionString,
+    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 15000,
+  });
+
+  p.on("error", (err) => {
+    console.error("[PostgreSQL Pool Error]:", err.message);
+  });
+
+  return p;
+}
+
+export const pool = createPool();
 
 export const db = pool
   ? drizzle(pool, { schema })

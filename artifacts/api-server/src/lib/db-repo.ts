@@ -17,6 +17,30 @@ import {
   notificationsTable,
   announcementsTable,
   auditLogsTable,
+  remoteConfigTable,
+  popupsTable,
+  bannersTable,
+  configVersionsTable,
+  adminSessionsTable,
+  dailyClosingReportsTable,
+  invoicesTable,
+  suspiciousActivitiesTable,
+  userDevicesTable,
+  couponsTable,
+  couponUsagesTable,
+  whatsappTemplatesTable,
+  floorsTable,
+  zonesTable,
+  studyGoalsTable,
+  focusSessionsTable,
+  rulesTable,
+  ruleExecutionsTable,
+  supportTicketsTable,
+  systemHealthTable,
+  bugReportsTable,
+  crashReportsTable,
+  incidentsTable,
+  telemetryMetricsTable,
   type UserRecord,
   type LibraryRecord,
   type SeatRecord,
@@ -75,8 +99,12 @@ export const isDbConnected = Boolean(db && pool);
 export const userRepo = {
   async findByPhone(phone: string) {
     if (isDbConnected) {
-      const [u] = await db.select().from(usersTable).where(eq(usersTable.phone, phone)).limit(1);
-      return u || null;
+      try {
+        const [u] = await db.select().from(usersTable).where(eq(usersTable.phone, phone)).limit(1);
+        return u || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding user by phone from database");
+      }
     }
     for (const u of inMemory.users.values()) {
       if (u.phone === phone) return u;
@@ -86,8 +114,12 @@ export const userRepo = {
 
   async findByEmail(email: string) {
     if (isDbConnected) {
-      const [u] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
-      return u || null;
+      try {
+        const [u] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
+        return u || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding user by email from database");
+      }
     }
     for (const u of inMemory.users.values()) {
       if (u.email?.toLowerCase() === email.toLowerCase().trim()) return u;
@@ -97,8 +129,12 @@ export const userRepo = {
 
   async findById(id: string) {
     if (isDbConnected) {
-      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
-      return u || null;
+      try {
+        const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+        return u || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding user by id from database");
+      }
     }
     return inMemory.users.get(id) || null;
   },
@@ -124,9 +160,13 @@ export const userRepo = {
     };
 
     if (isDbConnected) {
-      const [inserted] = await db.insert(usersTable).values(record as any).returning();
-      broadcastRealtime("student:updated", { userId: inserted.id, action: "created" });
-      return inserted;
+      try {
+        const [inserted] = await db.insert(usersTable).values(record as any).returning();
+        broadcastRealtime("student:updated", { userId: inserted.id, action: "created" });
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error inserting user to database");
+      }
     }
 
     inMemory.users.set(user.id, record);
@@ -136,13 +176,19 @@ export const userRepo = {
 
   async update(id: string, updates: Partial<UserRecord>) {
     if (isDbConnected) {
-      const [updated] = await db
-        .update(usersTable)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(usersTable.id, id))
-        .returning();
-      broadcastRealtime("student:updated", { userId: id, action: "updated" });
-      return updated;
+      try {
+        const [u] = await db
+          .update(usersTable)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(usersTable.id, id))
+          .returning();
+        if (u) {
+          broadcastRealtime("student:updated", { userId: id, action: "updated" });
+          return u;
+        }
+      } catch (err) {
+        logger.warn({ err }, "Error updating user in database");
+      }
     }
 
     const existing = inMemory.users.get(id);
@@ -155,7 +201,11 @@ export const userRepo = {
 
   async listByLibrary(libraryId: string) {
     if (isDbConnected) {
-      return await db.select().from(usersTable).where(eq(usersTable.assignedLibraryId, libraryId));
+      try {
+        return await db.select().from(usersTable).where(eq(usersTable.assignedLibraryId, libraryId));
+      } catch (err) {
+        logger.warn({ err }, "Error listing users by library from database");
+      }
     }
     const list: any[] = [];
     for (const u of inMemory.users.values()) {
@@ -166,7 +216,11 @@ export const userRepo = {
 
   async listAll() {
     if (isDbConnected) {
-      return await db.select().from(usersTable);
+      try {
+        return await db.select().from(usersTable);
+      } catch (err) {
+        logger.warn({ err }, "Error listing users from database");
+      }
     }
     return Array.from(inMemory.users.values());
   },
@@ -176,15 +230,23 @@ export const userRepo = {
 export const libraryRepo = {
   async listAll() {
     if (isDbConnected) {
-      return await db.select().from(librariesTable);
+      try {
+        return await db.select().from(librariesTable);
+      } catch (err) {
+        logger.warn({ err }, "Error querying libraries from database");
+      }
     }
     return Array.from(inMemory.libraries.values());
   },
 
   async findById(id: string) {
     if (isDbConnected) {
-      const [lib] = await db.select().from(librariesTable).where(eq(librariesTable.id, id)).limit(1);
-      return lib || null;
+      try {
+        const [lib] = await db.select().from(librariesTable).where(eq(librariesTable.id, id)).limit(1);
+        return lib || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding library by id from database");
+      }
     }
     return inMemory.libraries.get(id) || null;
   },
@@ -192,8 +254,12 @@ export const libraryRepo = {
   async findByPublicId(publicId: string) {
     const cleanId = publicId.trim().toUpperCase();
     if (isDbConnected) {
-      const [lib] = await db.select().from(librariesTable).where(eq(librariesTable.publicLibraryId, cleanId)).limit(1);
-      return lib || null;
+      try {
+        const [lib] = await db.select().from(librariesTable).where(eq(librariesTable.publicLibraryId, cleanId)).limit(1);
+        return lib || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding library by publicId from database");
+      }
     }
     for (const lib of inMemory.libraries.values()) {
       if ((lib as any).publicLibraryId === cleanId) return lib;
@@ -1081,7 +1147,12 @@ export const remoteConfigRepo = {
 export const popupRepo = {
   async listAll() {
     if (isDbConnected) {
-      return await db.select().from(popupsTable).orderBy(desc(popupsTable.priority));
+      try {
+        return await db.select().from(popupsTable).orderBy(desc(popupsTable.priority));
+      } catch (err) {
+        logger.warn({ err }, "Error querying popups from database");
+        return [];
+      }
     }
     return [];
   },
@@ -1135,7 +1206,12 @@ export const popupRepo = {
 export const bannerRepo = {
   async listAll() {
     if (isDbConnected) {
-      return await db.select().from(bannersTable).orderBy(desc(bannersTable.priority));
+      try {
+        return await db.select().from(bannersTable).orderBy(desc(bannersTable.priority));
+      } catch (err) {
+        logger.warn({ err }, "Error querying banners from database");
+        return [];
+      }
     }
     return [];
   },

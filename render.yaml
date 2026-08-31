@@ -8,10 +8,10 @@ services:
     region: singapore   # India के सबसे पास
     plan: free
     
-    # Build command - Uses npx --yes pnpm to run in user space without modifying /usr/bin
-    buildCommand: npx --yes pnpm install --no-frozen-lockfile && cd artifacts/admin-dashboard && PORT=3000 BASE_PATH=/ npx --yes pnpm run build && cd ../api-server && npx --yes pnpm run build
+    # Build command - Uses npx --yes pnpm to install and build all packages
+    buildCommand: npx --yes pnpm install --no-frozen-lockfile && npx --yes pnpm run build
     
-    # Start command - API server चलाएगा (admin dashboard भी serve करेगा)
+    # Start command - Runs API Server + Admin Dashboard
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     
     envVars:
@@ -22,9 +22,9 @@ services:
       - key: ADMIN_DIST_PATH
         value: ./artifacts/admin-dashboard/dist/public
       - key: DATABASE_URL
-        sync: false   # Render dashboard mein manually set karein
+        sync: false   # Set in Render Dashboard with Supabase Connection String
       - key: CORS_ORIGIN
-        value: "*"    # Deploy ke baad apna domain set karein
+        value: "*"    # Allow all origins (App + Web)
 
     # Health check
     healthCheckPath: /api/health

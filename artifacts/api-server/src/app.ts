@@ -50,13 +50,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
 // ── Static assets + publicPath ────────────────────────────────────────────────
-const publicPath =
-  process.env.ADMIN_DIST_PATH ||
-  path.resolve(__dirname, "../../admin-dashboard/dist/public");
+const defaultDist = path.resolve(__dirname, "../../admin-dashboard/dist/public");
+const publicPath = process.env.ADMIN_DIST_PATH
+  ? (path.isAbsolute(process.env.ADMIN_DIST_PATH)
+      ? process.env.ADMIN_DIST_PATH
+      : path.resolve(process.cwd(), process.env.ADMIN_DIST_PATH))
+  : defaultDist;
 
 // ── /api/health → Render.com health check ────────────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", service: "ghh-library", timestamp: new Date().toISOString() });
+  res.json({
+    status: "ok",
+    service: "ghh-library-api",
+    database: process.env.DATABASE_URL ? "configured" : "in-memory-mode",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ── /download → APK Download Landing Webpage (Link #2) ────────────────────────
