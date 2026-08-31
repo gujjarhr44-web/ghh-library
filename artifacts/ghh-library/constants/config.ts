@@ -16,7 +16,7 @@ export const getApiBaseUrl = (): string => {
   }
 
   // Production API endpoint fallback
-  return "https://ghh-library.onrender.com";
+  return "https://ghh-library-s4pl.onrender.com";
 };
 
 export const API_BASE = getApiBaseUrl();
