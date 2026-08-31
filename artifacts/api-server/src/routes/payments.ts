@@ -146,4 +146,46 @@ router.get("/pending", async (req, res) => {
   res.json(pending);
 });
 
+// ── 6. POST /api/payments/approve (Owner Approves Pending Payment) ───────────
+router.post("/approve", async (req, res) => {
+  const { paymentId, approvedBy } = req.body;
+  if (!paymentId) {
+    return res.status(400).json({ success: false, message: "Payment ID is required" });
+  }
+
+  try {
+    const payment = await paymentRepo.approvePayment(paymentId, approvedBy || "Library Owner");
+    logger.info({ paymentId, status: payment.status }, "Payment approved and credits activated");
+    return res.json({
+      success: true,
+      message: `Payment #${payment.receiptNumber || paymentId} approved. Credits activated for student.`,
+      payment,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Error approving payment");
+    return res.status(500).json({ success: false, message: err.message || "Failed to approve payment" });
+  }
+});
+
+// ── 7. POST /api/payments/reject (Owner Rejects Invalid Payment) ─────────────
+router.post("/reject", async (req, res) => {
+  const { paymentId, reason } = req.body;
+  if (!paymentId) {
+    return res.status(400).json({ success: false, message: "Payment ID is required" });
+  }
+
+  try {
+    const payment = await paymentRepo.rejectPayment(paymentId, reason);
+    logger.info({ paymentId }, "Payment rejected");
+    return res.json({
+      success: true,
+      message: "Payment rejected.",
+      payment,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Error rejecting payment");
+    return res.status(500).json({ success: false, message: err.message || "Failed to reject payment" });
+  }
+});
+
 export default router;

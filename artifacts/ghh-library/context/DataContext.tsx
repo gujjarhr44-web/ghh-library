@@ -282,9 +282,15 @@ async function apiGet<T>(path: string): Promise<T | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    const token = await AsyncStorage.getItem("@ghh_auth_token");
+    const headers: Record<string, string> = { "Bypass-Tunnel-Reminder": "true" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}${path}`, {
       signal: controller.signal,
-      headers: { "Bypass-Tunnel-Reminder": "true" },
+      headers,
     });
     clearTimeout(timeoutId);
     if (!res.ok) return null;
@@ -299,12 +305,18 @@ async function apiPost<T>(path: string, body: object): Promise<T | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    const token = await AsyncStorage.getItem("@ghh_auth_token");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Bypass-Tunnel-Reminder": "true",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Bypass-Tunnel-Reminder": "true",
-      },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });

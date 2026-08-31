@@ -804,6 +804,116 @@ export const paymentRepo = {
     }
     return list;
   },
+
+  async approvePayment(paymentId: string, approvedBy: string = "Library Owner") {
+    if (isDbConnected) {
+      return await db.transaction(async (tx) => {
+        const [payment] = await tx.select().from(paymentsTable).where(eq(paymentsTable.id, paymentId)).limit(1);
+        if (!payment) throw new Error("Payment record not found");
+        if (payment.status === "paid") return payment;
+
+        const [updatedPayment] = await tx
+          .update(paymentsTable)
+          .set({ status: "paid", approvedBy })
+          .where(eq(paymentsTable.id, paymentId))
+          .returning();
+
+        // Add credits
+        const memberships = await tx
+          .select()
+          .from(membershipsTable)
+          .where(and(eq(membershipsTable.userId, payment.userId), eq(membershipsTable.status, "active")))
+          .limit(1);
+
+        let currentCredits = 0;
+        if (memberships.length > 0) {
+          const m = memberships[0];
+          currentCredits = m.remainingCredits ?? 0;
+          const newCredits = currentCredits + (payment.creditsAdded ?? 30);
+
+          await tx
+            .update(membershipsTable)
+            .set({
+              totalCredits: (m.totalCredits ?? 0) + (payment.creditsAdded ?? 30),
+              remainingCredits: newCredits,
+              updatedAt: new Date(),
+            })
+            .where(eq(membershipsTable.id, m.id));
+        } else {
+          const startDate = getServerDate();
+          const exp = new Date();
+          exp.setDate(exp.getDate() + (payment.validityDays ?? 30));
+          const expiryDate = exp.toISOString().split("T")[0];
+
+          await tx.insert(membershipsTable).values({
+            id: `mem_${Date.now()}`,
+            userId: payment.userId,
+            libraryId: payment.libraryId,
+            planId: payment.planId || "p1",
+            status: "active",
+            startDate,
+            expiryDate,
+            totalCredits: payment.creditsAdded ?? 30,
+            remainingCredits: payment.creditsAdded ?? 30,
+            consumedCredits: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+
+        await tx.insert(creditTransactionsTable).values({
+          id: `ctx_${Date.now()}`,
+          userId: payment.userId,
+          libraryId: payment.libraryId,
+          type: "PURCHASE",
+          amount: payment.creditsAdded ?? 30,
+          balanceBefore: currentCredits,
+          balanceAfter: currentCredits + (payment.creditsAdded ?? 30),
+          reason: `Approved payment for ${payment.planName} (₹${payment.amount})`,
+          referenceId: payment.id,
+          createdAt: new Date(),
+        });
+
+        broadcastRealtime("payment:updated", updatedPayment);
+        broadcastRealtime("wallet:updated", { userId: payment.userId });
+        broadcastRealtime("stats:updated", { libraryId: payment.libraryId });
+
+        return updatedPayment;
+      });
+    }
+
+    const p = inMemory.payments.get(paymentId);
+    if (p) {
+      p.status = "paid";
+      p.approvedBy = approvedBy;
+      inMemory.payments.set(paymentId, p);
+      broadcastRealtime("payment:updated", p);
+      broadcastRealtime("wallet:updated", { userId: p.userId });
+      broadcastRealtime("stats:updated", { libraryId: p.libraryId });
+      return p;
+    }
+    throw new Error("Payment record not found");
+  },
+
+  async rejectPayment(paymentId: string, _reason?: string) {
+    if (isDbConnected) {
+      const [updated] = await db
+        .update(paymentsTable)
+        .set({ status: "rejected" })
+        .where(eq(paymentsTable.id, paymentId))
+        .returning();
+      broadcastRealtime("payment:updated", updated);
+      return updated;
+    }
+    const p = inMemory.payments.get(paymentId);
+    if (p) {
+      p.status = "rejected";
+      inMemory.payments.set(paymentId, p);
+      broadcastRealtime("payment:updated", p);
+      return p;
+    }
+    throw new Error("Payment record not found");
+  },
 };
 
 // ── REAL AGGREGATE STATS (Rule #67, #68, #80) ────────────────────────────────

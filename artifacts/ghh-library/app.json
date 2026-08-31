@@ -35,7 +35,7 @@
       [
         "expo-router",
         {
-          "origin": "https://ghh-library.onrender.com/"
+          "origin": "https://ghh-library-s4pl.onrender.com/"
         }
       ],
       "expo-font",

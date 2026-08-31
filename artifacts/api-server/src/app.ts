@@ -67,6 +67,54 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// ── /api/health/deep → Deep System Diagnostics (Rule #179) ───────────────────
+app.get("/api/health/deep", async (_req, res) => {
+  const startTime = Date.now();
+  let dbStatus = "disconnected";
+  let dbLatencyMs: number | null = null;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const { pool } = await import("@workspace/db");
+      if (pool) {
+        const dbStart = Date.now();
+        await pool.query("SELECT 1;");
+        dbLatencyMs = Date.now() - dbStart;
+        dbStatus = "connected";
+      }
+    } catch (err: any) {
+      dbStatus = `error: ${err.message || "query failed"}`;
+    }
+  }
+
+  const memoryUsage = process.memoryUsage();
+  const deepHealth = {
+    status: dbStatus === "connected" ? "ok" : "degraded",
+    service: "ghh-library-api",
+    version: "2.0.0",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    diagnostics: {
+      database: {
+        status: dbStatus,
+        latencyMs: dbLatencyMs,
+        pooler: Boolean(process.env.DATABASE_URL?.includes("pooler")),
+      },
+      memory: {
+        heapUsedMb: Math.round(memoryUsage.heapUsed / (1024 * 1024)),
+        heapTotalMb: Math.round(memoryUsage.heapTotal / (1024 * 1024)),
+        rssMb: Math.round(memoryUsage.rss / (1024 * 1024)),
+      },
+      nodeVersion: process.version,
+      platform: process.platform,
+      totalResponseTimeMs: Date.now() - startTime,
+    },
+  };
+
+  const statusCode = deepHealth.status === "ok" ? 200 : 200; // Return 200 with diagnostics payload
+  res.status(statusCode).json(deepHealth);
+});
+
 // ── /download → APK Download Landing Webpage (Link #2) ────────────────────────
 app.get("/download", (_req, res) => {
   const downloadPage = path.resolve(publicPath, "download.html");
