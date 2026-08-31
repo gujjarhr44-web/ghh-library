@@ -24,9 +24,16 @@ function createPool(): pg.Pool | null {
     parsed.searchParams.delete("sslmode");
     parsed.searchParams.delete("ssl");
 
-    // If direct Supabase host (db.<ref>.supabase.co), username must be 'postgres' without tenant prefix
-    if (parsed.hostname.endsWith(".supabase.co") && parsed.username.startsWith("postgres.")) {
-      parsed.username = "postgres";
+    if (parsed.username.startsWith("postgres.")) {
+      const ref = parsed.username.split(".")[1];
+      if (parsed.hostname.endsWith(".supabase.co")) {
+        parsed.username = "postgres";
+      } else if (parsed.hostname.includes("pooler.supabase.com")) {
+        // Direct database host fallback connects directly to project host on port 5432
+        parsed.hostname = `db.${ref}.supabase.co`;
+        parsed.port = "5432";
+        parsed.username = "postgres";
+      }
     }
 
     connectionString = parsed.toString();
