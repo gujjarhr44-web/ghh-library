@@ -23,6 +23,12 @@ function createPool(): pg.Pool | null {
     const parsed = new URL(rawDbUrl);
     parsed.searchParams.delete("sslmode");
     parsed.searchParams.delete("ssl");
+
+    // If direct Supabase host (db.<ref>.supabase.co), username must be 'postgres' without tenant prefix
+    if (parsed.hostname.endsWith(".supabase.co") && parsed.username.startsWith("postgres.")) {
+      parsed.username = "postgres";
+    }
+
     connectionString = parsed.toString();
   } catch {
     // Fallback if URL parsing fails
