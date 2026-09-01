@@ -140,7 +140,7 @@ app.get(["/ghh-library.apk", "/download/apk"], (_req, res) => {
   res.sendFile(apkPath, (err) => {
     if (err) {
       // Stream fallback or redirect to Expo Cloud Build CDN (Link #3)
-      res.redirect("https://expo.dev/accounts/gujjarhr44/projects/ghh-library/builds");
+      res.redirect("https://expo.dev/accounts/gautamchandela/projects/ghh-library/builds");
     }
   });
 });
