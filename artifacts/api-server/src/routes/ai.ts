@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { logger } from "../lib/logger";
+import { generateGeminiReply } from "../lib/gemini";
 import {
   statsRepo,
   paymentRepo,
@@ -16,7 +17,7 @@ import {
 
 const router = Router();
 
-// ── 1. POST /api/ai/query (Universal Grounded AI Assistant) ─────────────────
+// ── 1. POST /api/ai/query (Universal Grounded AI Assistant with Gemini Flash) ─────────────────
 router.post("/query", async (req, res) => {
   const { role = "student", query, userId, libraryId } = req.body;
 
@@ -26,6 +27,58 @@ router.post("/query", async (req, res) => {
 
   const q = query.toLowerCase().trim();
   logger.info({ role, query: q, userId, libraryId }, "AI Intelligence Query received");
+
+  // Collect live database context for grounding
+  let contextData: any = {};
+  try {
+    if (role === "student") {
+      const user = userId ? await userRepo.findById(userId) : null;
+      const attendanceRecords = userId ? await attendanceRepo.listByUser(userId) : [];
+      const payments = userId ? await paymentRepo.listByUser(userId) : [];
+      const seats = await libraryRepo.getSeats(libraryId || "lib_1");
+      const activePayment = payments.find((p) => p.status === "paid");
+
+      contextData = {
+        studentName: user?.name || "Student",
+        creditsRemaining: activePayment?.creditsAdded ?? 0,
+        currentPlan: activePayment?.planName || "30 Days Access",
+        totalAttendanceSessions: attendanceRecords.length,
+        totalSeatsInLibrary: seats.length,
+        availableSeats: seats.filter((s) => s.status === "available").length,
+      };
+    } else if (role === "owner") {
+      const stats = await statsRepo.getOwnerStats(libraryId);
+      contextData = {
+        monthlyRevenue: stats.monthlyRevenue,
+        activeStudents: stats.activeStudents,
+        totalSeats: stats.totalSeats,
+        occupiedSeats: stats.occupiedSeats,
+        availableSeats: stats.availableSeats,
+      };
+    }
+  } catch (err) {
+    logger.warn({ err }, "Could not fetch full DB context for AI prompt");
+  }
+
+  // 1. Try Google Gemini Flash LLM First
+  try {
+    const geminiReply = await generateGeminiReply({
+      prompt: query,
+      role: role as any,
+      contextData,
+    });
+
+    if (geminiReply) {
+      return res.json({
+        success: true,
+        reply: geminiReply,
+        dataPoints: contextData,
+        source: "Google Gemini 1.5 Flash (Grounded on DB)",
+      });
+    }
+  } catch (err: any) {
+    logger.warn({ err: err.message }, "Gemini Flash query skipped to fallback engine");
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ── A. STUDENT AI COACH (Grounded in Verified Personal Database Records)

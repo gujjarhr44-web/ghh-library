@@ -68,13 +68,96 @@ router.get("/", async (req, res) => {
   return res.json(libraries);
 });
 
-// ── 2. GET /api/libraries/:id (Get library detail by ID) ──────────────────────
+// ── 4. GET /api/libraries/:id (Get library detail by ID) ──────────────────────
 router.get("/:id", async (req, res) => {
   const lib = await libraryRepo.findById(req.params["id"]);
   if (!lib) {
     return res.status(404).json({ success: false, message: "Library not found" });
   }
   return res.json(lib);
+});
+
+// ── 5. POST /api/libraries (Create New Library) ───────────────────────────────
+router.post("/", async (req, res) => {
+  const {
+    name,
+    ownerName,
+    ownerId,
+    address,
+    city,
+    state = "Haryana",
+    pincode = "127306",
+    area,
+    latitude,
+    longitude,
+    totalSeats = 60,
+    billingMode = "credit",
+    facilities = ["AC", "WiFi", "RO Water", "CCTV", "Power Backup"],
+    openTime = "06:00 AM",
+    closeTime = "11:00 PM",
+    googleMapsUrl,
+  } = req.body;
+
+  if (!name || !ownerName || !address || !city || !area) {
+    return res.status(400).json({ success: false, message: "Name, owner name, address, city, and area are required." });
+  }
+
+  try {
+    const id = `lib_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const uniqueId = await libraryRepo.generateUniqueLibraryId(pincode);
+
+    const created = await libraryRepo.createLibrary({
+      id,
+      publicLibraryId: uniqueId.publicLibraryId,
+      libraryCode: uniqueId.libraryCode,
+      ownerId: ownerId || "usr_owner_default",
+      name: name.trim(),
+      ownerName: ownerName.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      pincode: uniqueId.pincode,
+      area: area.trim(),
+      latitude: latitude ? String(latitude) : null,
+      longitude: longitude ? String(longitude) : null,
+      googleMapsUrl: googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + " " + address)}`,
+      rating: "4.8",
+      totalSeats: Number(totalSeats),
+      availableSeats: Number(totalSeats),
+      occupancyRate: 0,
+      billingMode,
+      facilities,
+      openTime,
+      closeTime,
+      isVerified: true,
+      isOpen: true,
+    });
+
+    logger.info({ libraryId: created.id, publicLibraryId: created.publicLibraryId }, "New library created");
+
+    return res.status(201).json({
+      success: true,
+      message: `Library created successfully with Public ID: ${created.publicLibraryId}`,
+      library: created,
+    });
+  } catch (err: any) {
+    logger.error({ err }, "Error creating library");
+    return res.status(500).json({ success: false, message: err.message || "Failed to create library" });
+  }
+});
+
+// ── 6. PATCH /api/libraries/:id (Update Library Details) ──────────────────────
+router.patch("/:id", async (req, res) => {
+  try {
+    const updated = await libraryRepo.updateLibrary(req.params["id"], req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Library not found" });
+    }
+    return res.json({ success: true, message: "Library updated successfully", library: updated });
+  } catch (err: any) {
+    logger.error({ err }, "Error updating library");
+    return res.status(500).json({ success: false, message: err.message || "Failed to update library" });
+  }
 });
 
 export default router;

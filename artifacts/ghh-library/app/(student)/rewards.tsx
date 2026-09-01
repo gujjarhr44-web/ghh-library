@@ -21,7 +21,59 @@ export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { streak, studyAnalytics, leaderboard, isLeaderboardOptedIn, toggleLeaderboardPrivacy } = useData();
-  const [tab, setTab] = useState<"loyalty" | "leaderboard">("loyalty");
+  const [tab, setTab] = useState<"achievements" | "loyalty" | "leaderboard">("achievements");
+  const [claimedRewards, setClaimedRewards] = useState<Record<string, boolean>>({});
+
+  const achievements = [
+    {
+      id: "ach_1",
+      title: "First Day Scholar",
+      description: "Complete your first study session in the library",
+      iconName: "book-open-page-variant",
+      progress: studyAnalytics.studyDays > 0 ? 1 : 0,
+      target: 1,
+      unlocked: studyAnalytics.studyDays >= 1,
+      claimed: !!claimedRewards["ach_1"],
+      reward: "2 Credits",
+    },
+    {
+      id: "ach_2",
+      title: "7-Day Streak Master",
+      description: "Maintain a study streak of 7 consecutive days",
+      iconName: "fire",
+      progress: Math.min(7, streak),
+      target: 7,
+      unlocked: streak >= 7,
+      claimed: !!claimedRewards["ach_2"],
+      reward: "5 Credits",
+    },
+    {
+      id: "ach_3",
+      title: "Century Club (100 Hours)",
+      description: "Accumulate over 100 hours of verified study time",
+      iconName: "clock-check",
+      progress: Math.min(100, studyAnalytics.totalStudyHours),
+      target: 100,
+      unlocked: studyAnalytics.totalStudyHours >= 100,
+      claimed: !!claimedRewards["ach_3"],
+      reward: "10 Credits",
+    },
+    {
+      id: "ach_4",
+      title: "Early Bird (Morning Shift)",
+      description: "Punch in before 07:00 AM on 5 different days",
+      iconName: "weather-sunset-up",
+      progress: Math.min(5, studyAnalytics.studyDays),
+      target: 5,
+      unlocked: studyAnalytics.studyDays >= 5,
+      claimed: !!claimedRewards["ach_4"],
+      reward: "3 Credits",
+    },
+  ];
+
+  const claimReward = (id: string, _credits: number) => {
+    setClaimedRewards((prev) => ({ ...prev, [id]: true }));
+  };
 
   const loyaltyLevel = streak >= 30 ? "Platinum" : streak >= 14 ? "Gold" : streak >= 7 ? "Silver" : "Bronze";
 

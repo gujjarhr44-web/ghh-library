@@ -148,7 +148,7 @@ export default function OwnerDashboard() {
       amount: Number(manualAmount) || 1000,
       method: manualMethod,
       planName: manualPlanName,
-      credits: Number(manualCredits) || 30,
+      creditsAdded: Number(manualCredits) || 30,
       validityDays: 30,
     });
 

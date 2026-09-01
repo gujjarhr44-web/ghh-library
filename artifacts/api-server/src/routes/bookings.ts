@@ -85,4 +85,16 @@ router.get("/waitlist/:libraryId", async (req, res) => {
   res.json(list);
 });
 
+// ── 5. POST /api/bookings/:id/cancel (Cancel Seat Reservation) ────────────────
+router.post("/:id/cancel", async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const result = await bookingRepo.cancelBooking(req.params["id"], userId);
+    return res.json(result);
+  } catch (err: any) {
+    logger.error({ err, bookingId: req.params["id"] }, "Error cancelling booking");
+    return res.status(400).json({ success: false, message: err.message || "Failed to cancel booking" });
+  }
+});
+
 export default router;

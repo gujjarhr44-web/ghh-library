@@ -8,7 +8,15 @@ export type RealtimeEvent =
   | "wallet:updated"
   | "stats:updated"
   | "student:updated"
-  | "settings:updated";
+  | "settings:updated"
+  | "floor:updated"
+  | "zone:updated"
+  | "leave:updated"
+  | "library:updated"
+  | "waitlist:notified"
+  | "config:updated"
+  | "announcement:broadcast"
+  | "notification:new";
 
 type RealtimeListener = (event: RealtimeEvent, payload: unknown) => void;
 const listeners: RealtimeListener[] = [];

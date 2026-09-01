@@ -453,4 +453,39 @@ router.get("/notifications", async (_req, res) => {
   res.json([]);
 });
 
+// ── 21. MULTI-FLOOR DIGITAL TWIN & 2D/3D/4D SPATIAL ENGINE ──────────────────
+router.get("/digital-twin/floors", async (req, res) => {
+  const libraryId = (req.query["libraryId"] as string) || "lib001";
+  try {
+    const floors = await digitalTwinRepo.getFloors(libraryId);
+    res.json(floors);
+  } catch (err: any) {
+    logger.error({ err }, "Error fetching digital twin floors");
+    res.status(500).json({ error: "Failed to fetch floors" });
+  }
+});
+
+router.get("/digital-twin/history", async (req, res) => {
+  const libraryId = (req.query["libraryId"] as string) || "lib001";
+  const datetime = (req.query["datetime"] as string) || undefined;
+  try {
+    const history = await digitalTwinRepo.getHistory(libraryId, datetime);
+    res.json(history);
+  } catch (err: any) {
+    logger.error({ err }, "Error fetching digital twin history");
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
+
+router.patch("/digital-twin/seats/:seatId/coords", async (req, res) => {
+  const { x, y, z } = req.body;
+  try {
+    const updated = await digitalTwinRepo.updateSeatCoordinates(req.params["seatId"], Number(x), Number(y), z ? Number(z) : 0);
+    res.json({ success: true, seat: updated });
+  } catch (err: any) {
+    logger.error({ err }, "Error updating seat coordinates");
+    res.status(500).json({ error: "Failed to update seat coordinates" });
+  }
+});
+
 export default router;

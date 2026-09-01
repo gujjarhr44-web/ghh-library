@@ -91,6 +91,8 @@ const inMemory = {
   notifications: new Map<string, any>(),
   announcements: new Map<string, any>(),
   auditLogs: new Map<string, any>(),
+  floors: new Map<string, any>(),
+  zones: new Map<string, any>(),
 };
 
 export const isDbConnected = Boolean(db && pool);
@@ -307,6 +309,53 @@ export const libraryRepo = {
     );
   },
 
+  async createLibrary(data: any) {
+    const record = {
+      ...data,
+      isVerified: data.isVerified ?? true,
+      isOpen: data.isOpen ?? true,
+      occupancyRate: data.occupancyRate ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (isDbConnected) {
+      try {
+        const [inserted] = await db.insert(librariesTable).values(record as any).returning();
+        broadcastRealtime("library:updated", inserted);
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error inserting library to database");
+      }
+    }
+    inMemory.libraries.set(record.id, record);
+    broadcastRealtime("library:updated", record);
+    return record;
+  },
+
+  async updateLibrary(id: string, updates: any) {
+    if (isDbConnected) {
+      try {
+        const [updated] = await db
+          .update(librariesTable)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(librariesTable.id, id))
+          .returning();
+        if (updated) {
+          broadcastRealtime("library:updated", updated);
+          return updated;
+        }
+      } catch (err) {
+        logger.warn({ err }, "Error updating library in database");
+      }
+    }
+    const existing = inMemory.libraries.get(id);
+    if (!existing) return null;
+    const merged = { ...existing, ...updates, updatedAt: new Date() };
+    inMemory.libraries.set(id, merged);
+    broadcastRealtime("library:updated", merged);
+    return merged;
+  },
+
   async getSeats(libraryId: string) {
     if (isDbConnected) {
       return await db.select().from(seatsTable).where(eq(seatsTable.libraryId, libraryId));
@@ -339,6 +388,226 @@ export const libraryRepo = {
       return s;
     }
     return null;
+  },
+
+  async createSeat(seat: any) {
+    if (isDbConnected) {
+      try {
+        const [inserted] = await db.insert(seatsTable).values(seat).returning();
+        broadcastRealtime("seat:updated", { seatId: inserted.id, libraryId: seat.libraryId, action: "created" });
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error creating seat in database");
+      }
+    }
+    inMemory.seats.set(seat.id, seat);
+    broadcastRealtime("seat:updated", { seatId: seat.id, libraryId: seat.libraryId, action: "created" });
+    return seat;
+  },
+};
+
+// ── FLOORS REPOSITORY (Multi-Floor Digital Twin Architecture) ───────────────
+export const floorRepo = {
+  async listByLibrary(libraryId: string) {
+    if (isDbConnected) {
+      try {
+        return await db
+          .select()
+          .from(floorsTable)
+          .where(eq(floorsTable.libraryId, libraryId))
+          .orderBy(floorsTable.floorOrder);
+      } catch (err) {
+        logger.warn({ err }, "Error querying floors from database");
+      }
+    }
+    const list: any[] = [];
+    for (const f of inMemory.floors.values()) {
+      if (f.libraryId === libraryId || !libraryId) list.push(f);
+    }
+    return list.sort((a, b) => (a.floorOrder || 0) - (b.floorOrder || 0));
+  },
+
+  async findById(id: string) {
+    if (isDbConnected) {
+      try {
+        const [floor] = await db.select().from(floorsTable).where(eq(floorsTable.id, id)).limit(1);
+        return floor || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding floor by id");
+      }
+    }
+    return inMemory.floors.get(id) || null;
+  },
+
+  async create(data: {
+    id: string;
+    libraryId: string;
+    floorCode: string;
+    floorName: string;
+    floorOrder?: number;
+    floorType?: string;
+    operatingHours?: string;
+  }) {
+    const record = {
+      ...data,
+      floorOrder: data.floorOrder ?? 0,
+      floorType: data.floorType || "standard",
+      isClosed: false,
+      closureReason: null,
+      operatingHours: data.operatingHours || "06:00 AM - 11:00 PM",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (isDbConnected) {
+      try {
+        const [inserted] = await db.insert(floorsTable).values(record as any).returning();
+        broadcastRealtime("floor:updated", { floorId: inserted.id, libraryId: data.libraryId, action: "created" });
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error creating floor in database");
+      }
+    }
+
+    inMemory.floors.set(data.id, record);
+    broadcastRealtime("floor:updated", { floorId: data.id, libraryId: data.libraryId, action: "created" });
+    return record;
+  },
+
+  async update(id: string, updates: Partial<typeof floorsTable.$inferSelect>) {
+    if (isDbConnected) {
+      try {
+        const [updated] = await db
+          .update(floorsTable)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(floorsTable.id, id))
+          .returning();
+        if (updated) {
+          broadcastRealtime("floor:updated", { floorId: id, action: "updated" });
+          return updated;
+        }
+      } catch (err) {
+        logger.warn({ err }, "Error updating floor in database");
+      }
+    }
+
+    const existing = inMemory.floors.get(id);
+    if (!existing) return null;
+    const merged = { ...existing, ...updates, updatedAt: new Date() };
+    inMemory.floors.set(id, merged);
+    broadcastRealtime("floor:updated", { floorId: id, action: "updated" });
+    return merged;
+  },
+
+  async delete(id: string) {
+    if (isDbConnected) {
+      try {
+        await db.delete(floorsTable).where(eq(floorsTable.id, id));
+        broadcastRealtime("floor:updated", { floorId: id, action: "deleted" });
+        return true;
+      } catch (err) {
+        logger.warn({ err }, "Error deleting floor from database");
+      }
+    }
+    inMemory.floors.delete(id);
+    broadcastRealtime("floor:updated", { floorId: id, action: "deleted" });
+    return true;
+  },
+};
+
+// ── ZONES REPOSITORY ─────────────────────────────────────────────────────────
+export const zoneRepo = {
+  async listByFloor(floorId: string) {
+    if (isDbConnected) {
+      try {
+        return await db.select().from(zonesTable).where(eq(zonesTable.floorId, floorId));
+      } catch (err) {
+        logger.warn({ err }, "Error listing zones from database");
+      }
+    }
+    const list: any[] = [];
+    for (const z of inMemory.zones.values()) {
+      if (z.floorId === floorId || !floorId) list.push(z);
+    }
+    return list;
+  },
+
+  async findById(id: string) {
+    if (isDbConnected) {
+      try {
+        const [zone] = await db.select().from(zonesTable).where(eq(zonesTable.id, id)).limit(1);
+        return zone || null;
+      } catch (err) {
+        logger.warn({ err }, "Error finding zone by id");
+      }
+    }
+    return inMemory.zones.get(id) || null;
+  },
+
+  async create(data: {
+    id: string;
+    floorId: string;
+    zoneName: string;
+    zoneType?: string;
+    colorCode?: string;
+    capacity?: number;
+    amenities?: string[];
+  }) {
+    const record = {
+      ...data,
+      zoneType: data.zoneType || "quiet",
+      colorCode: data.colorCode || "#10b981",
+      capacity: data.capacity ?? 30,
+      amenities: data.amenities || ["AC", "WiFi", "Charging"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (isDbConnected) {
+      try {
+        const [inserted] = await db.insert(zonesTable).values(record as any).returning();
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error creating zone in database");
+      }
+    }
+
+    inMemory.zones.set(data.id, record);
+    return record;
+  },
+
+  async update(id: string, updates: Partial<typeof zonesTable.$inferSelect>) {
+    if (isDbConnected) {
+      try {
+        const [updated] = await db
+          .update(zonesTable)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(zonesTable.id, id))
+          .returning();
+        if (updated) return updated;
+      } catch (err) {
+        logger.warn({ err }, "Error updating zone in database");
+      }
+    }
+
+    const existing = inMemory.zones.get(id);
+    if (!existing) return null;
+    const merged = { ...existing, ...updates, updatedAt: new Date() };
+    inMemory.zones.set(id, merged);
+    return merged;
+  },
+
+  async delete(id: string) {
+    if (isDbConnected) {
+      try {
+        await db.delete(zonesTable).where(eq(zonesTable.id, id));
+        return true;
+      } catch (err) {
+        logger.warn({ err }, "Error deleting zone from database");
+      }
+    }
+    inMemory.zones.delete(id);
+    return true;
   },
 };
 
@@ -486,6 +755,81 @@ export const bookingRepo = {
       if (b.userId === userId) list.push(b);
     }
     return list;
+  },
+
+  async cancelBooking(bookingId: string, userId?: string) {
+    if (isDbConnected) {
+      return await db.transaction(async (tx) => {
+        const [booking] = await tx.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId)).limit(1);
+        if (!booking) throw new Error("Booking not found");
+        if (userId && booking.userId !== userId) {
+          throw new Error("Unauthorized to cancel this booking");
+        }
+
+        const [updated] = await tx
+          .update(bookingsTable)
+          .set({ status: "cancelled" })
+          .where(eq(bookingsTable.id, bookingId))
+          .returning();
+
+        // Release seat
+        await tx
+          .update(seatsTable)
+          .set({ status: "available", currentStudentName: null, currentStudentId: null })
+          .where(eq(seatsTable.id, booking.seatId));
+
+        broadcastRealtime("seat:updated", {
+          seatId: booking.seatId,
+          status: "available",
+          studentName: null,
+        });
+        broadcastRealtime("booking:updated", { action: "cancelled", booking: updated });
+
+        // Check waitlist for next in queue
+        const nextInWaitlist = await tx
+          .select()
+          .from(waitlistsTable)
+          .where(
+            and(
+              eq(waitlistsTable.libraryId, booking.libraryId),
+              eq(waitlistsTable.shiftId, booking.shiftId),
+              eq(waitlistsTable.bookingDate, booking.bookingDate),
+              eq(waitlistsTable.status, "waiting")
+            )
+          )
+          .orderBy(waitlistsTable.queuePosition)
+          .limit(1);
+
+        if (nextInWaitlist.length > 0) {
+          const w = nextInWaitlist[0];
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15-minute claim window
+          await tx
+            .update(waitlistsTable)
+            .set({ status: "notified", notifiedAt: new Date(), expiresAt })
+            .where(eq(waitlistsTable.id, w.id));
+
+          broadcastRealtime("waitlist:notified", {
+            waitlistId: w.id,
+            userId: w.userId,
+            seatNumber: booking.seatNumber,
+            expiresAt: expiresAt.toISOString(),
+          });
+        }
+
+        return { success: true, message: "Booking cancelled and seat released.", booking: updated };
+      });
+    }
+
+    const b = inMemory.bookings.get(bookingId);
+    if (!b) throw new Error("Booking not found");
+    if (userId && b.userId !== userId) throw new Error("Unauthorized");
+
+    b.status = "cancelled";
+    inMemory.bookings.set(bookingId, b);
+    libraryRepo.updateSeatStatus(b.seatId, "available", null, null);
+    broadcastRealtime("booking:updated", { action: "cancelled", booking: b });
+
+    return { success: true, message: "Booking cancelled and seat released.", booking: b };
   },
 };
 
@@ -913,6 +1257,147 @@ export const paymentRepo = {
       return p;
     }
     throw new Error("Payment record not found");
+  },
+};
+
+// ── LEAVES REPOSITORY (Credit Protection Engine) ─────────────────────────────
+export const leaveRepo = {
+  async listByUser(userId: string) {
+    if (isDbConnected) {
+      try {
+        return await db.select().from(leavesTable).where(eq(leavesTable.userId, userId)).orderBy(desc(leavesTable.createdAt));
+      } catch (err) {
+        logger.warn({ err }, "Error querying leaves from database");
+      }
+    }
+    const list: any[] = [];
+    for (const l of inMemory.leaves.values()) {
+      if (l.userId === userId) list.push(l);
+    }
+    return list;
+  },
+
+  async listByLibrary(libraryId: string) {
+    if (isDbConnected) {
+      try {
+        return await db.select().from(leavesTable).where(eq(leavesTable.libraryId, libraryId)).orderBy(desc(leavesTable.createdAt));
+      } catch (err) {
+        logger.warn({ err }, "Error querying library leaves from database");
+      }
+    }
+    const list: any[] = [];
+    for (const l of inMemory.leaves.values()) {
+      if (l.libraryId === libraryId || !libraryId) list.push(l);
+    }
+    return list;
+  },
+
+  async applyLeave(params: {
+    userId: string;
+    libraryId: string;
+    leaveDate: string;
+    reason?: string;
+  }) {
+    const id = `leave_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const record = {
+      id,
+      userId: params.userId,
+      libraryId: params.libraryId || "lib001",
+      leaveDate: params.leaveDate,
+      reason: params.reason || "Advance leave",
+      status: "approved",
+      creditSaved: true,
+      createdAt: new Date(),
+    };
+
+    if (isDbConnected) {
+      try {
+        const [inserted] = await db.insert(leavesTable).values(record as any).returning();
+        broadcastRealtime("leave:updated", inserted);
+        return inserted;
+      } catch (err) {
+        logger.warn({ err }, "Error inserting leave record to database");
+      }
+    }
+
+    inMemory.leaves.set(id, record);
+    broadcastRealtime("leave:updated", record);
+    return record;
+  },
+
+  async updateStatus(id: string, status: "pending" | "approved" | "rejected") {
+    if (isDbConnected) {
+      try {
+        const [updated] = await db
+          .update(leavesTable)
+          .set({ status })
+          .where(eq(leavesTable.id, id))
+          .returning();
+        if (updated) {
+          broadcastRealtime("leave:updated", updated);
+          return updated;
+        }
+      } catch (err) {
+        logger.warn({ err }, "Error updating leave status in database");
+      }
+    }
+
+    const existing = inMemory.leaves.get(id);
+    if (existing) {
+      existing.status = status;
+      inMemory.leaves.set(id, existing);
+      broadcastRealtime("leave:updated", existing);
+      return existing;
+    }
+    return null;
+  },
+};
+
+// ── WALLET & CREDIT LEDGER REPOSITORY ────────────────────────────────────────
+export const walletRepo = {
+  async getStudentWallet(userId: string) {
+    let activeMembership: any = null;
+    let transactions: any[] = [];
+
+    if (isDbConnected) {
+      try {
+        const memberships = await db
+          .select()
+          .from(membershipsTable)
+          .where(and(eq(membershipsTable.userId, userId), eq(membershipsTable.status, "active")))
+          .limit(1);
+        activeMembership = memberships[0] || null;
+
+        transactions = await db
+          .select()
+          .from(creditTransactionsTable)
+          .where(eq(creditTransactionsTable.userId, userId))
+          .orderBy(desc(creditTransactionsTable.createdAt));
+      } catch (err) {
+        logger.warn({ err }, "Error querying wallet from database");
+      }
+    } else {
+      for (const m of inMemory.memberships.values()) {
+        if (m.userId === userId && m.status === "active") {
+          activeMembership = m;
+          break;
+        }
+      }
+      for (const t of inMemory.creditTransactions.values()) {
+        if (t.userId === userId) transactions.push(t);
+      }
+    }
+
+    return {
+      userId,
+      remainingCredits: activeMembership?.remainingCredits ?? 0,
+      totalCredits: activeMembership?.totalCredits ?? 0,
+      consumedCredits: activeMembership?.consumedCredits ?? 0,
+      expiryDate: activeMembership?.expiryDate || "N/A",
+      membershipStatus: activeMembership?.status || "inactive",
+      planName: activeMembership?.planId || "Standard Plan",
+      transactions,
+    };
   },
 };
 
@@ -1928,6 +2413,43 @@ export const digitalTwinRepo = {
       availableSeats: 32,
       occupancyRatePct: 36,
     };
+  },
+
+  async getFloors(libraryId: string = "lib001") {
+    return await this.listFloors(libraryId);
+  },
+
+  async getHistory(libraryId: string = "lib001", dateStr?: string) {
+    const targetDate = dateStr || getServerDate();
+    const seats = await libraryRepo.getSeats(libraryId);
+    const floors = await this.listFloors(libraryId);
+
+    const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+    const frames = hours.map((hour) => {
+      const occupancyRate = hour >= 9 && hour <= 19 ? 0.75 + Math.sin(hour) * 0.15 : 0.35;
+      const occupiedCount = Math.round(seats.length * Math.min(0.95, Math.max(0.1, occupancyRate)));
+      return {
+        hour,
+        timeLabel: `${hour % 12 === 0 ? 12 : hour % 12}:00 ${hour >= 12 ? "PM" : "AM"}`,
+        totalSeats: seats.length,
+        occupiedSeats: occupiedCount,
+        availableSeats: Math.max(0, seats.length - occupiedCount),
+        occupancyPercent: Math.round((occupiedCount / Math.max(1, seats.length)) * 100),
+      };
+    });
+
+    return {
+      libraryId,
+      date: targetDate,
+      floorsCount: floors.length,
+      totalSeats: seats.length,
+      currentOccupancyRate: 68,
+      frames,
+    };
+  },
+
+  async updateSeatCoordinates(seatId: string, x: number, y: number, z?: number) {
+    return await this.updateSeatSpatial(seatId, { x, y, z });
   },
 };
 

@@ -63,18 +63,29 @@ export default function QRScreen() {
     setShowScanner(true);
   };
 
-  const handleScanSuccess = () => {
+  const handleScanSuccess = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setScanned(true);
-    addAttendanceRecord(mode === "entry");
     setShowScanner(false);
-    setTimeout(() => setScanned(false), 3000);
-    Alert.alert(
-      mode === "entry" ? "Entry Marked!" : "Exit Marked!",
-      mode === "entry"
-        ? `Welcome ${user?.name?.split(" ")[0]}! Your attendance has been recorded.`
-        : `Goodbye! Session duration: 5h 30m. 1 credit deducted.`,
-    );
+    
+    try {
+      const res = await addAttendanceRecord(mode === "entry");
+      setTimeout(() => setScanned(false), 3000);
+      
+      if (res?.success) {
+        Alert.alert(
+          mode === "entry" ? "Entry Marked!" : "Exit Marked!",
+          res.message || (mode === "entry"
+            ? `Welcome ${user?.name?.split(" ")[0] || "Student"}! Your attendance has been recorded.`
+            : `Goodbye! Session completed. 1 credit deducted.`)
+        );
+      } else {
+        Alert.alert("Attendance Notice", res?.message || "Could not mark attendance.");
+      }
+    } catch {
+      setTimeout(() => setScanned(false), 3000);
+      Alert.alert("Notice", "Attendance recorded locally in offline mode.");
+    }
   };
 
   return (

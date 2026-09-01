@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { logger } from "../lib/logger";
+import { broadcastRealtime } from "../lib/realtime";
 
 const router = Router();
 
@@ -83,11 +84,12 @@ router.post("/", (req, res) => {
   };
 
   announcementsStore.unshift(announcement);
-  logger.info({ announcement }, "Announcement broadcasted");
+  broadcastRealtime("announcement:broadcast", announcement);
+  logger.info({ announcement }, "Announcement broadcasted via WebSockets");
 
   return res.status(201).json({
     success: true,
-    message: `Announcement broadcasted to ${targetGroup.toUpperCase()} students.`,
+    message: `Announcement broadcasted to ${targetGroup ? targetGroup.toUpperCase() : "ALL"} students.`,
     announcement,
   });
 });

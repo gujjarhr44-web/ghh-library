@@ -357,6 +357,8 @@ interface DataContextValue {
   updateLibraryBillingMode: (libraryId: string, mode: LibraryBillingMode) => void;
   bookSeat: (seatId: string, shiftId: string, bookingDate?: string) => Promise<boolean>;
   joinWaitlist: (libraryId: string, shiftId: string, bookingDate?: string) => Promise<{ success: boolean; position?: number }>;
+  hasActiveSession: () => boolean;
+  addAttendanceRecord: (isEntry: boolean) => Promise<{ success: boolean; message: string }>;
   markAttendance: (method?: "qr" | "wifi" | "manual") => Promise<{ success: boolean; message: string; creditDeducted?: boolean }>;
   punchOutAttendance: () => Promise<{ success: boolean; message: string }>;
   applyLeave: (date: string, reason: string) => Promise<{ success: boolean; message: string; creditProtected?: boolean }>;
@@ -534,8 +536,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return { success: false };
   }, [refreshData]);
 
+  const hasActiveSession = useCallback(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return attendanceRecords.some((a) => a.date === today && !a.exitTime && a.status === "present");
+  }, [attendanceRecords]);
+
   const markAttendance = useCallback(async (method: "qr" | "wifi" | "manual" = "qr") => {
+    let currentUserId = "u001";
+    let currentUserName = "Student";
+    try {
+      const storedUser = await AsyncStorage.getItem("@ghh_user_profile");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u.id) currentUserId = u.id;
+        if (u.name) currentUserName = u.name;
+      }
+    } catch {}
+
     const res = await apiPost<{ success: boolean; message: string; record: any }>("/api/attendance/punch-in", {
+      userId: currentUserId,
+      studentName: currentUserName,
       entryMethod: method,
       libraryId: selectedLibrary?.id || "lib001",
     });
@@ -547,8 +567,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [refreshData, selectedLibrary]);
 
   const punchOutAttendance = useCallback(async () => {
+    let currentUserId = "u001";
+    try {
+      const storedUser = await AsyncStorage.getItem("@ghh_user_profile");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u.id) currentUserId = u.id;
+      }
+    } catch {}
+
     const res = await apiPost<{ success: boolean; message: string }>("/api/attendance/punch-out", {
-      userId: "u001",
+      userId: currentUserId,
     });
     if (res?.success) {
       refreshData();
@@ -557,8 +586,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return { success: false, message: "No active entry session found." };
   }, [refreshData]);
 
+  const addAttendanceRecord = useCallback(async (isEntry: boolean) => {
+    if (isEntry) {
+      const res = await markAttendance("qr");
+      return { success: res.success, message: res.message };
+    } else {
+      const res = await punchOutAttendance();
+      return { success: res.success, message: res.message };
+    }
+  }, [markAttendance, punchOutAttendance]);
+
   const applyLeave = useCallback(async (date: string, reason: string) => {
+    let currentUserId = "u001";
+    try {
+      const storedUser = await AsyncStorage.getItem("@ghh_user_profile");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u.id) currentUserId = u.id;
+      }
+    } catch {}
+
     const res = await apiPost<{ success: boolean; message: string }>("/api/student/leave", {
+      userId: currentUserId,
       date,
       reason,
     });
@@ -569,7 +618,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const purchasePlan = useCallback(async (plan: LibraryPlan, method: string, transactionId?: string) => {
+    let currentUserId = "u001";
+    let currentUserName = "Student";
+    try {
+      const storedUser = await AsyncStorage.getItem("@ghh_user_profile");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u.id) currentUserId = u.id;
+        if (u.name) currentUserName = u.name;
+      }
+    } catch {}
+
     const res = await apiPost<{ success: boolean; message: string; payment: PaymentReceipt }>("/api/payments/request-verification", {
+      userId: currentUserId,
+      studentName: currentUserName,
       planId: plan.id,
       planName: plan.name,
       amount: plan.price,
@@ -600,7 +662,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const rejectPayment = useCallback((paymentId: string) => {
     setPendingPayments((prev) => prev.filter((p) => p.id !== paymentId));
-  }, []);
+    refreshData();
+  }, [refreshData]);
 
   const toggleSeatStatus = useCallback((seatId: string) => {
     setSeats((prev) =>
@@ -613,15 +676,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openDirections = useCallback((library: Library) => {
-    const query = library.latitude && library.longitude ? `${library.latitude},${library.longitude}` : encodeURIComponent(library.address);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${query}`,
-      android: `geo:0,0?q=${query}`,
-      default: `https://www.google.com/maps/search/?api=1&query=${query}`,
-    });
-    Linking.openURL(url as string).catch(() => {
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-    });
+    const url = library.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(library.name + " " + library.address)}`;
+    Linking.openURL(url).catch(console.error);
   }, []);
 
   const queryAiAssistant = useCallback(async (query: string, role: "student" | "owner") => {
@@ -692,6 +748,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateLibraryBillingMode,
         bookSeat,
         joinWaitlist,
+        hasActiveSession,
+        addAttendanceRecord,
         markAttendance,
         punchOutAttendance,
         applyLeave,
